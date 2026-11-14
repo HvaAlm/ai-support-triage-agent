@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-14T10:13:40.155Z",
+  "updatedAt": "2026-11-14T10:22:11.663Z",
   "createdAt": "2026-11-14T10:13:23.266Z",
   "id": "triageIntakeCore",
   "name": "Datami — Intake Core",
@@ -528,11 +528,45 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        -1000,
+        -1120,
         -32
       ],
       "id": "3a423e9d-ed92-4083-9597-fadce9a01cdf",
       "name": "Telegram Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "924a89b2-58af-4704-bd06-57592157343e",
+              "leftValue": "={{ Boolean($json.message?.chat?.id && $json.message?.from?.id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -880,
+        -32
+      ],
+      "id": "9f1a85f1-ca03-4b78-acde-1c186e84d13f",
+      "name": "Has Telegram Message?"
     }
   ],
   "connections": {
@@ -718,11 +752,23 @@
       "main": [
         [
           {
-            "node": "Is New Case Command?",
+            "node": "Has Telegram Message?",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Has Telegram Message?": {
+      "main": [
+        [
+          {
+            "node": "Is New Case Command?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
@@ -735,9 +781,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "51b45c69-9b08-4609-88bd-797f9c3c2e17",
-  "activeVersionId": "51b45c69-9b08-4609-88bd-797f9c3c2e17",
-  "versionCounter": 1,
+  "versionId": "febb1cc8-c0fb-4c2e-acd2-eb572a37f5cf",
+  "activeVersionId": "febb1cc8-c0fb-4c2e-acd2-eb572a37f5cf",
+  "versionCounter": 2,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "tags": [],
