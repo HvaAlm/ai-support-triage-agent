@@ -1,0 +1,58 @@
+---
+name: jira-worklog
+description: Logs time against a Jira issue. Use for "log 2h on PAY-123" or "I
+  spent 30 minutes on PAY-123 today". This is a write operation gated behind
+  explicit user confirmation.
+version: 1.0.0
+metadata:
+  category: software-development
+  hermes:
+    tags:
+      - jira
+      - project-management
+      - tickets
+      - write
+    category: software-development
+    requires_toolsets:
+      - terminal
+---
+# Jira: Worklog
+
+**Write, gated.** Run from this skill's directory:
+
+```bash
+python3 ../jira/scripts/jira_tool.py worklog --issue_key PAY-123 --duration 2h --description "implementing validation" [--date 2026-07-20] --confirm
+```
+
+(First-time setup, once per environment: `pip install -r ../jira/requirements.txt`.)
+
+`--issue_key`, `--duration` (Jira-style, e.g. `2h`, `1d 30m`), and
+`--description` are required. This refuses to execute unless run with
+`--confirm` (enforced in code, not just prompted). Unless
+`JIRA_AUTO_CONFIRM_WRITES=true` is set:
+
+1. State exactly what you're about to log -- **including the date**, if
+   not today -- and wait for the user's explicit yes.
+2. Only then re-run the same command with `--confirm` appended.
+3. If the result has `"requires_confirmation": true`, treat that as the
+   tool declining to act -- relay `pending_action` (which echoes back
+   `date` and the resolved `started` timestamp) to the user and ask,
+   don't retry with `--confirm` on your own.
+
+`--date` is optional and defaults to now. It accepts a relative offset
+(`-1d`), an ISO date (`2026-07-20`), or a full ISO datetime -- **you must
+resolve relative day-names ("last Tuesday", "yesterday") to an actual
+calendar date yourself first** (you know today's date); this tool does
+not parse natural-language dates, and never silently logs against
+"today" when the user asked for a different day -- if you're not sure
+which date they mean, ask before running the command.
+
+If the result contains `"error"`, tell the user what went wrong in
+plain language instead of retrying silently or fabricating a result.
+
+Not sure whether the request is a new log, a fix to an existing entry,
+or a deletion? Use `jira-log` instead -- it routes to whichever of
+`jira-worklog`/`jira-worklog-edit`/`jira-worklog-delete` fits.
+
+See `../jira/README.md` for architecture details and the full
+environment-variable table.

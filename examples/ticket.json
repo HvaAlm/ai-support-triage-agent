@@ -1,0 +1,9 @@
+{
+  "title": "Order creation returns HTTP 500",
+  "description": "Support reports HTTP 500 during order creation. Root cause unverified.",
+  "team": "backend",
+  "priority": "high",
+  "steps_to_reproduce": [],
+  "missing_information": ["Request ID", "Exact reproduction steps"],
+  "attachments": []
+}

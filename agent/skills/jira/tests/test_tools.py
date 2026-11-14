@@ -1,0 +1,798 @@
+from unittest.mock import MagicMock, patch
+
+from lib.auth import JiraConfig
+from lib.models import Comment, Issue, IssueLink, Sprint, User, Worklog
+from tools import (
+    blockers,
+    create_issue,
+    edit_issue,
+    issue_summary,
+    kanban_status,
+    list_fields,
+    my_work,
+    now,
+    project_context,
+    search,
+    search_users,
+    sprint,
+    transition,
+    triage,
+    worklog,
+    worklog_delete,
+    worklog_edit,
+    worklog_report,
+)
+
+
+def _issue(
+    key="PAY-1",
+    status="To Do",
+    links=None,
+    priority="High",
+    updated="2026-07-20",
+    original_estimate_seconds=None,
+):
+    return Issue(
+        key=key,
+        summary="Fix bug",
+        status=status,
+        priority=priority,
+        issue_type="Bug",
+        assignee="Alice",
+        reporter="Bob",
+        updated=updated,
+        created="2026-07-01",
+        due_date=None,
+        links=links or [],
+        original_estimate_seconds=original_estimate_seconds,
+    )
+
+
+def _fake_config(auto_confirm=False):
+    return JiraConfig(
+        base_url="https://jira.example.com",
+        auto_confirm_writes=auto_confirm,
+    )
+
+
+def test_my_work_returns_issues_with_blocked_flag_scoped_to_default_project():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = "PAY"
+    mock_client.search.return_value = [_issue(status="Blocked")]
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        result = my_work.my_work()
+    assert result["project"] == "PAY"
+    assert result["count"] == 1
+    assert result["issues"][0]["key"] == "PAY-1"
+    assert result["issues"][0]["blocked"] is True
+    jql = mock_client.search.call_args[0][0]
+    assert jql.startswith("project = PAY AND")
+
+
+def test_my_work_unscoped_when_no_project_resolves():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = None
+    mock_client.search.return_value = []
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        result = my_work.my_work()
+    assert result["project"] is None
+    jql = mock_client.search.call_args[0][0]
+    assert "project =" not in jql
+
+
+def test_my_work_all_projects_skips_project_resolution():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = "PAY"
+    mock_client.search.return_value = []
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        result = my_work.my_work(all_projects=True)
+    assert result["project"] is None
+    mock_client.resolve_project.assert_not_called()
+    jql = mock_client.search.call_args[0][0]
+    assert "project =" not in jql
+
+
+def test_my_work_explicit_project_overrides_default():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = "PAY"
+    mock_client.search.return_value = []
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        result = my_work.my_work(project="OTHER")
+    mock_client.resolve_project.assert_called_once_with("OTHER")
+    assert result["project"] == "PAY"
+
+
+def test_my_work_requests_only_the_fields_it_uses():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = None
+    mock_client.search.return_value = []
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        my_work.my_work()
+    _, kwargs = mock_client.search.call_args
+    assert set(kwargs["fields"]) == {"summary", "priority", "status", "updated", "issuelinks"}
+
+
+def test_my_work_wraps_errors_as_json():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = None
+    from lib.jira_client import JiraApiError
+
+    mock_client.search.side_effect = JiraApiError("boom", status_code=500)
+    with patch("tools.my_work.get_client", return_value=mock_client):
+        result = my_work.my_work()
+    assert "error" in result
+
+
+def test_blockers_reports_reasons():
+    link = IssueLink("is blocked by", "inward", "PAY-2", "dep", "In Progress")
+    mock_client = MagicMock()
+    mock_client.get_issue.return_value = _issue(links=[link])
+    mock_client.get_comments.return_value = []
+    with patch("tools.blockers.get_client", return_value=mock_client):
+        result = blockers.blockers("PAY-1")
+    assert result["blocked"] is True
+    assert "PAY-2" in result["reasons"][0]
+
+
+def test_blockers_rejects_empty_issue_key():
+    result = blockers.blockers("")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_issue_summary_combines_all_sources():
+    mock_client = MagicMock()
+    mock_client.get_issue.return_value = _issue()
+    mock_client.get_comments.return_value = [Comment("1", "Alice", "hi", "2026-07-01", None)]
+    mock_client.get_worklogs.return_value = [Worklog("1", "Alice", "2h", 7200, "work", "2026-07-01")]
+    mock_client.get_changelog.return_value = []
+    with patch("tools.issue_summary.get_client", return_value=mock_client):
+        result = issue_summary.issue_summary("PAY-1")
+    assert result["issue"]["key"] == "PAY-1"
+    assert len(result["comments"]) == 1
+    assert len(result["worklogs"]) == 1
+    assert "linked_issues" in result
+
+
+def test_issue_summary_sections_limits_output_and_skips_fetches():
+    mock_client = MagicMock()
+    mock_client.get_issue.return_value = _issue()
+    with patch("tools.issue_summary.get_client", return_value=mock_client):
+        result = issue_summary.issue_summary("PAY-1", sections=["issue"])
+    assert set(result.keys()) == {"issue"}
+    mock_client.get_comments.assert_not_called()
+    mock_client.get_worklogs.assert_not_called()
+    mock_client.get_changelog.assert_not_called()
+
+
+def test_issue_summary_rejects_unknown_section():
+    result = issue_summary.issue_summary("PAY-1", sections=["bogus"])
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_search_requires_jql():
+    result = search.search("")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_search_returns_count_and_issues():
+    mock_client = MagicMock()
+    mock_client.search.return_value = [_issue()]
+    with patch("tools.search.get_client", return_value=mock_client):
+        result = search.search("project = PAY")
+    assert result["count"] == 1
+    assert result["issues"][0]["key"] == "PAY-1"
+
+
+def test_search_requests_default_fields_plus_extra():
+    mock_client = MagicMock()
+    mock_client.search.return_value = []
+    with patch("tools.search.get_client", return_value=mock_client):
+        search.search("project = PAY", fields=["customfield_10056"])
+    _, kwargs = mock_client.search.call_args
+    assert "customfield_10056" in kwargs["fields"]
+    assert "summary" in kwargs["fields"]  # a default field is still requested
+
+
+def test_search_omits_description_by_default():
+    mock_client = MagicMock()
+    issue = _issue()
+    object.__setattr__(issue, "description", "a very long description")
+    mock_client.search.return_value = [issue]
+    with patch("tools.search.get_client", return_value=mock_client):
+        result = search.search("project = PAY")
+    assert "description" not in result["issues"][0]
+    _, kwargs = mock_client.search.call_args
+    assert "description" not in kwargs["fields"]
+
+
+def test_search_includes_description_when_requested_via_only():
+    mock_client = MagicMock()
+    issue = _issue()
+    object.__setattr__(issue, "description", "a very long description")
+    mock_client.search.return_value = [issue]
+    with patch("tools.search.get_client", return_value=mock_client):
+        result = search.search("project = PAY", only=["summary", "description"])
+    assert result["issues"][0]["description"] == "a very long description"
+    assert "priority" not in result["issues"][0]
+    _, kwargs = mock_client.search.call_args
+    assert set(kwargs["fields"]) == {"summary", "description", "status", "issuelinks"}
+
+
+def test_search_only_still_fetches_status_and_links_for_blocked_detection():
+    mock_client = MagicMock()
+    mock_client.search.return_value = [_issue(status="Blocked")]
+    with patch("tools.search.get_client", return_value=mock_client):
+        result = search.search("project = PAY", only=["summary"])
+    assert result["issues"][0]["blocked"] is True
+    assert "status" not in result["issues"][0]
+    assert "links" not in result["issues"][0]
+
+
+def test_search_rejects_unknown_field_name():
+    mock_client = MagicMock()
+    with patch("tools.search.get_client", return_value=mock_client):
+        result = search.search("project = PAY", only=["bogus_field"])
+    assert result["error"]["type"] == "JiraValidationError"
+    mock_client.search.assert_not_called()
+
+
+def test_search_users_returns_query_count_and_users():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = None
+    mock_client.search_users.return_value = [User(account_id="abc123", display_name="John Smith")]
+    with patch("tools.search_users.get_client", return_value=mock_client):
+        result = search_users.search_users("john")
+    assert result["count"] == 1
+    assert result["users"][0]["account_id"] == "abc123"
+    assert result["project"] is None
+
+
+def test_search_users_passes_project_through_to_client():
+    mock_client = MagicMock()
+    mock_client.resolve_project.return_value = "PAYKAN"
+    mock_client.search_users.return_value = []
+    with patch("tools.search_users.get_client", return_value=mock_client):
+        result = search_users.search_users("sam", project="PAYKAN")
+    mock_client.search_users.assert_called_once_with(
+        "sam", project="PAYKAN", all_projects=False, max_results=25
+    )
+    assert result["project"] == "PAYKAN"
+
+
+def test_search_users_reports_no_project_when_all_projects_forced():
+    mock_client = MagicMock()
+    mock_client.search_users.return_value = []
+    with patch("tools.search_users.get_client", return_value=mock_client):
+        result = search_users.search_users("sam", project="PAYKAN", all_projects=True)
+    mock_client.search_users.assert_called_once_with(
+        "sam", project="PAYKAN", all_projects=True, max_results=25
+    )
+    assert result["project"] is None
+    mock_client.resolve_project.assert_not_called()
+
+
+def test_search_users_rejects_empty_query():
+    result = search_users.search_users("")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_create_issue_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.create_issue.get_client", return_value=mock_client):
+        result = create_issue.create_issue("PAYKAN", "Fix bug", "Bug")
+    assert result["confirmed"] is False
+    assert result["requires_confirmation"] is True
+    mock_client.create_issue.assert_not_called()
+
+
+def test_create_issue_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.create_issue.return_value = _issue(key="PAYKAN-500")
+    with patch("tools.create_issue.get_client", return_value=mock_client):
+        result = create_issue.create_issue("PAYKAN", "Fix bug", "Bug", confirm=True)
+    assert result["confirmed"] is True
+    assert result["issue"]["key"] == "PAYKAN-500"
+    mock_client.create_issue.assert_called_once_with(
+        "PAYKAN",
+        "Fix bug",
+        "Bug",
+        description=None,
+        parent_key=None,
+        labels=None,
+        assignee_account_id=None,
+        priority=None,
+        components=None,
+        custom_fields=None,
+    )
+
+
+def test_create_issue_rejects_missing_required_fields():
+    result = create_issue.create_issue("", "Fix bug", "Bug")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_create_issue_passes_custom_fields_through_to_client():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.create_issue.return_value = _issue(key="PAYKAN-500")
+    custom_fields = {"customfield_10201": "Expected", "customfield_10202": "Actual"}
+    with patch("tools.create_issue.get_client", return_value=mock_client):
+        result = create_issue.create_issue(
+            "PAYKAN", "Fix bug", "Bug", custom_fields=custom_fields, confirm=True
+        )
+    assert result["confirmed"] is True
+    mock_client.create_issue.assert_called_once_with(
+        "PAYKAN",
+        "Fix bug",
+        "Bug",
+        description=None,
+        parent_key=None,
+        labels=None,
+        assignee_account_id=None,
+        priority=None,
+        components=None,
+        custom_fields=custom_fields,
+    )
+
+
+def test_create_issue_pending_action_echoes_custom_fields():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    custom_fields = {"customfield_10201": "Expected"}
+    with patch("tools.create_issue.get_client", return_value=mock_client):
+        result = create_issue.create_issue("PAYKAN", "Fix bug", "Bug", custom_fields=custom_fields)
+    assert result["pending_action"]["custom_fields"] == custom_fields
+
+
+def test_edit_issue_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.edit_issue.get_client", return_value=mock_client):
+        result = edit_issue.edit_issue("PAYKAN-1", summary="New title")
+    assert result["confirmed"] is False
+    assert result["requires_confirmation"] is True
+    mock_client.edit_issue.assert_not_called()
+
+
+def test_edit_issue_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.edit_issue.return_value = _issue(key="PAYKAN-1")
+    with patch("tools.edit_issue.get_client", return_value=mock_client):
+        result = edit_issue.edit_issue("PAYKAN-1", summary="New title", confirm=True)
+    assert result["confirmed"] is True
+    assert result["issue"]["key"] == "PAYKAN-1"
+
+
+def test_edit_issue_rejects_when_no_fields_given():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.edit_issue.get_client", return_value=mock_client):
+        result = edit_issue.edit_issue("PAYKAN-1")
+    assert result["error"]["type"] == "invalid_input"
+    mock_client.edit_issue.assert_not_called()
+
+
+def test_edit_issue_accepts_only_custom_fields():
+    """custom_fields alone should satisfy the "at least one field" gate."""
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    mock_client.edit_issue.return_value = _issue(key="PAYKAN-1")
+    custom_fields = {"customfield_10201": "Expected"}
+    with patch("tools.edit_issue.get_client", return_value=mock_client):
+        result = edit_issue.edit_issue("PAYKAN-1", custom_fields=custom_fields)
+    assert result["confirmed"] is True
+    mock_client.edit_issue.assert_called_once_with(
+        "PAYKAN-1",
+        summary=None,
+        description=None,
+        labels=None,
+        assignee_account_id=None,
+        priority=None,
+        components=None,
+        custom_fields=custom_fields,
+    )
+
+
+def test_list_fields_returns_client_result():
+    mock_client = MagicMock()
+    mock_client.list_fields.return_value = [{"id": "summary", "name": "Summary", "custom": False}]
+    with patch("tools.list_fields.get_client", return_value=mock_client):
+        result = list_fields.list_fields()
+    assert result == [{"id": "summary", "name": "Summary", "custom": False}]
+
+
+def test_now_reports_a_timezone_aware_local_timestamp():
+    import datetime as dt
+
+    fixed = dt.datetime(2026, 7, 25, 14, 32, 11, 500000, tzinfo=dt.timezone(dt.timedelta(hours=3, minutes=30)))
+
+    class _FixedDatetime(dt.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed
+
+    with patch("tools.now._dt.datetime", _FixedDatetime):
+        result = now.now()
+
+    assert result["now"] == "2026-07-25T14:32:11+03:30"
+    assert result["date"] == "2026-07-25"
+    assert result["time"] == "14:32"
+    assert result["weekday"] == "Saturday"
+    assert result["timezone"] == "+0330"
+
+
+def test_now_output_is_accepted_by_worklogs_date_parser():
+    """`now` is only useful if worklog --date takes it verbatim."""
+    from lib.utils import format_jira_timestamp, parse_worklog_date
+
+    result = now.now()
+    parsed = parse_worklog_date(result["now"])
+
+    assert parsed.tzinfo is not None
+    assert parsed.strftime("%Y-%m-%d") == result["date"]
+    assert parsed.strftime("%H:%M") == result["time"]
+    assert parsed.strftime("%A") == result["weekday"]
+    # And round-trips into the timestamp format the client actually sends.
+    assert format_jira_timestamp(parsed).startswith(result["date"])
+
+
+def test_triage_delegates_to_client_and_returns_result():
+    mock_client = MagicMock()
+    mock_client.triage.return_value = {"project": "PAYKAN", "issue_count": 0, "stories": []}
+    with patch("tools.triage.get_client", return_value=mock_client):
+        result = triage.triage(project="PAYKAN")
+    assert result["project"] == "PAYKAN"
+    mock_client.triage.assert_called_once_with(
+        project="PAYKAN", parent_issue_types=None, max_results=200
+    )
+
+
+def test_triage_wraps_errors_as_json():
+    mock_client = MagicMock()
+    from lib.jira_client import JiraValidationError
+
+    mock_client.triage.side_effect = JiraValidationError("no project")
+    with patch("tools.triage.get_client", return_value=mock_client):
+        result = triage.triage()
+    assert "error" in result
+
+
+def test_project_context_delegates_to_client_and_returns_result():
+    mock_client = MagicMock()
+    mock_client.project_context.return_value = {
+        "project": "PAYKAN",
+        "statuses": ["To Do", "Done"],
+        "users": [],
+        "labels": [],
+    }
+    with patch("tools.project_context.get_client", return_value=mock_client):
+        result = project_context.project_context(project="PAYKAN")
+    assert result["project"] == "PAYKAN"
+    mock_client.project_context.assert_called_once_with(project="PAYKAN")
+
+
+def test_project_context_wraps_errors_as_json():
+    mock_client = MagicMock()
+    from lib.jira_client import JiraValidationError
+
+    mock_client.project_context.side_effect = JiraValidationError("no project")
+    with patch("tools.project_context.get_client", return_value=mock_client):
+        result = project_context.project_context()
+    assert "error" in result
+
+
+def test_worklog_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work")
+    assert result["confirmed"] is False
+    assert result["requires_confirmation"] is True
+    mock_client.add_worklog.assert_not_called()
+
+
+def test_worklog_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.add_worklog.return_value = Worklog("1", "Alice", "2h", 7200, "did work", "2026-07-21")
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work", confirm=True)
+    assert result["confirmed"] is True
+    mock_client.add_worklog.assert_called_once_with("PAY-1", 7200, "did work", started=None)
+
+
+def test_worklog_with_date_passes_formatted_started_timestamp():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.add_worklog.return_value = Worklog("1", "Alice", "2h", 7200, "did work", "2026-07-20")
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work", date="2026-07-20T09:00:00+00:00", confirm=True)
+    assert result["confirmed"] is True
+    mock_client.add_worklog.assert_called_once_with(
+        "PAY-1", 7200, "did work", started="2026-07-20T09:00:00.000+0000"
+    )
+
+
+def test_worklog_pending_action_includes_date_and_started():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work", date="2026-07-20")
+    assert result["requires_confirmation"] is True
+    assert result["pending_action"]["date"] == "2026-07-20"
+    assert result["pending_action"]["started"].startswith("2026-07-20T")
+
+
+def test_worklog_rejects_unparseable_date():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work", date="last tuesday")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_worklog_auto_confirm_config_skips_gate():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    mock_client.add_worklog.return_value = Worklog("1", "Alice", "2h", 7200, "did work", "2026-07-21")
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "2h", "did work")
+    assert result["confirmed"] is True
+
+
+def test_worklog_rejects_bad_duration():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog.get_client", return_value=mock_client):
+        result = worklog.worklog("PAY-1", "not-a-duration", "did work")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_worklog_edit_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        result = worklog_edit.worklog_edit("PAY-1", "28459", duration="1h")
+    assert result["confirmed"] is False
+    assert result["requires_confirmation"] is True
+    mock_client.update_worklog.assert_not_called()
+
+
+def test_worklog_edit_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.update_worklog.return_value = Worklog("28459", "Alice", "1h", 3600, "did work", "2026-07-20")
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        result = worklog_edit.worklog_edit("PAY-1", "28459", duration="1h", confirm=True)
+    assert result["confirmed"] is True
+    mock_client.update_worklog.assert_called_once_with(
+        "PAY-1", "28459", duration_seconds=3600, description=None, started=None
+    )
+
+
+def test_worklog_edit_rejects_when_no_fields_given():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        result = worklog_edit.worklog_edit("PAY-1", "28459")
+    assert result["error"]["type"] == "invalid_input"
+    mock_client.update_worklog.assert_not_called()
+
+
+def test_worklog_edit_rejects_bad_duration():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        result = worklog_edit.worklog_edit("PAY-1", "28459", duration="not-a-duration")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_worklog_edit_rejects_unparseable_date():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        result = worklog_edit.worklog_edit("PAY-1", "28459", date="last tuesday")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_worklog_edit_with_date_passes_formatted_started_timestamp():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    mock_client.update_worklog.return_value = Worklog("28459", "Alice", "1h", 3600, "did work", "2026-07-20")
+    with patch("tools.worklog_edit.get_client", return_value=mock_client):
+        worklog_edit.worklog_edit("PAY-1", "28459", date="2026-07-20T09:00:00+00:00")
+    mock_client.update_worklog.assert_called_once_with(
+        "PAY-1", "28459", duration_seconds=None, description=None, started="2026-07-20T09:00:00.000+0000"
+    )
+
+
+def test_worklog_delete_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.worklog_delete.get_client", return_value=mock_client):
+        result = worklog_delete.worklog_delete("PAY-1", "28459")
+    assert result["confirmed"] is False
+    assert result["requires_confirmation"] is True
+    mock_client.delete_worklog.assert_not_called()
+
+
+def test_worklog_delete_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.worklog_delete.get_client", return_value=mock_client):
+        result = worklog_delete.worklog_delete("PAY-1", "28459", confirm=True)
+    assert result["confirmed"] is True
+    assert result["deleted"] is True
+    mock_client.delete_worklog.assert_called_once_with("PAY-1", "28459")
+
+
+def test_worklog_delete_auto_confirm_config_skips_gate():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=True)
+    with patch("tools.worklog_delete.get_client", return_value=mock_client):
+        result = worklog_delete.worklog_delete("PAY-1", "28459")
+    assert result["confirmed"] is True
+
+
+def test_transition_requires_confirmation_by_default():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    with patch("tools.transition.get_client", return_value=mock_client):
+        result = transition.transition("PAY-1", "Review")
+    assert result["requires_confirmation"] is True
+    mock_client.transition_issue.assert_not_called()
+
+
+def test_transition_executes_when_confirmed():
+    mock_client = MagicMock()
+    mock_client.config = _fake_config(auto_confirm=False)
+    mock_client.transition_issue.return_value = {
+        "issue_key": "PAY-1",
+        "transitioned_to": "Review",
+        "transition_name": "Move to Review",
+        "success": True,
+    }
+    with patch("tools.transition.get_client", return_value=mock_client):
+        result = transition.transition("PAY-1", "Review", confirm=True)
+    assert result["confirmed"] is True
+    assert result["transitioned_to"] == "Review"
+
+
+def test_worklog_report_aggregates_within_window_only():
+    mock_client = MagicMock()
+    mock_client.get_current_user.return_value = User(account_id="alice", display_name="Alice")
+    mock_client.search.return_value = [_issue(original_estimate_seconds=3600)]
+    mock_client.get_worklogs.return_value = [
+        Worklog("1", "Alice", "2h", 7200, "in range", "2026-07-20T09:00:00.000+0000"),
+        Worklog("2", "Alice", "1h", 3600, "too old", "2026-06-01T09:00:00.000+0000"),
+        Worklog("3", "Bob", "3h", 10800, "not mine", "2026-07-20T09:00:00.000+0000"),
+    ]
+    with patch("tools.worklog_report.get_client", return_value=mock_client):
+        result = worklog_report.worklog_report(since="2026-07-01")
+
+    assert result["issue_count"] == 1
+    assert result["total_logged_seconds"] == 7200
+    assert result["total_original_estimate_seconds"] == 3600
+    assert result["total_delta_seconds"] == 3600
+    assert len(result["issues"][0]["worklogs"]) == 1
+    assert result["issues"][0]["worklogs"][0]["comment"] == "in range"
+
+
+def test_worklog_report_omits_issues_with_no_matching_worklogs():
+    mock_client = MagicMock()
+    mock_client.get_current_user.return_value = User(account_id="alice", display_name="Alice")
+    mock_client.search.return_value = [_issue()]
+    mock_client.get_worklogs.return_value = [
+        Worklog("1", "Bob", "1h", 3600, "not mine", "2026-07-20T09:00:00.000+0000"),
+    ]
+    with patch("tools.worklog_report.get_client", return_value=mock_client):
+        result = worklog_report.worklog_report(since="2026-07-01")
+
+    assert result["issue_count"] == 0
+    assert result["issues"] == []
+
+
+def test_worklog_report_rejects_until_before_since():
+    result = worklog_report.worklog_report(since="2026-07-15", until="2026-07-01")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_worklog_report_rejects_unparseable_date():
+    result = worklog_report.worklog_report(since="not-a-date")
+    assert result["error"]["type"] == "invalid_input"
+
+
+def test_sprint_returns_board_and_active_sprint():
+    mock_client = MagicMock()
+    from lib.models import Board
+
+    mock_client.current_board.return_value = Board(3, "PAY Board", "scrum")
+    mock_client.current_sprint.return_value = Sprint(55, "Sprint 12", "active", "2026-07-01", "2026-07-15", "Ship it", 3)
+    with patch("tools.sprint.get_client", return_value=mock_client):
+        result = sprint.sprint()
+    assert result["board"]["name"] == "PAY Board"
+    assert result["sprint"]["goal"] == "Ship it"
+    mock_client.current_board.assert_called_once_with(project=None)
+    mock_client.current_sprint.assert_called_once_with(3)
+
+
+def test_sprint_scopes_board_lookup_to_project():
+    mock_client = MagicMock()
+    from lib.models import Board
+
+    mock_client.current_board.return_value = Board(3, "PAY Board", "scrum")
+    mock_client.current_sprint.return_value = None
+    with patch("tools.sprint.get_client", return_value=mock_client):
+        sprint.sprint(project="PAY")
+    mock_client.current_board.assert_called_once_with(project="PAY")
+
+
+def test_sprint_reports_kanban_note_instead_of_querying_sprints():
+    mock_client = MagicMock()
+    from lib.models import Board
+
+    mock_client.current_board.return_value = Board(4, "PAYKAN board", "kanban")
+    with patch("tools.sprint.get_client", return_value=mock_client):
+        result = sprint.sprint(project="PAYKAN")
+    assert result["sprint"] is None
+    assert "kanban" in result["note"].lower()
+    mock_client.current_sprint.assert_not_called()
+
+
+def test_sprint_reports_note_when_no_board_found_for_project():
+    mock_client = MagicMock()
+    mock_client.current_board.return_value = None
+    mock_client.resolve_project.return_value = "PAYKAN"
+    with patch("tools.sprint.get_client", return_value=mock_client):
+        result = sprint.sprint(project="PAYKAN")
+    assert result["board"] is None
+    assert result["sprint"] is None
+    assert "PAYKAN" in result["note"]
+
+
+def test_sprint_explicit_board_id_skips_project_resolution():
+    mock_client = MagicMock()
+    mock_client.current_sprint.return_value = None
+    with patch("tools.sprint.get_client", return_value=mock_client):
+        result = sprint.sprint(board_id=99)
+    assert result["board"] == {"id": 99}
+    mock_client.current_board.assert_not_called()
+    mock_client.current_sprint.assert_called_once_with(99)
+
+
+def test_kanban_status_resolves_board_from_project():
+    mock_client = MagicMock()
+    from lib.models import Board
+
+    mock_client.current_board.return_value = Board(4, "PAYKAN board", "kanban")
+    mock_client.kanban_status.return_value = {
+        "board_id": 4,
+        "columns": ["To Do", "Done"],
+        "issue_counts_by_column": {"To Do": 2, "Done": 5},
+    }
+    with patch("tools.kanban_status.get_client", return_value=mock_client):
+        result = kanban_status.kanban_status(project="PAYKAN")
+    assert result["board_id"] == 4
+    mock_client.current_board.assert_called_once_with(project="PAYKAN")
+    mock_client.kanban_status.assert_called_once_with(4)
+
+
+def test_kanban_status_explicit_board_id_skips_resolution():
+    mock_client = MagicMock()
+    mock_client.kanban_status.return_value = {"board_id": 7, "columns": [], "issue_counts_by_column": {}}
+    with patch("tools.kanban_status.get_client", return_value=mock_client):
+        result = kanban_status.kanban_status(board_id=7)
+    assert result["board_id"] == 7
+    mock_client.current_board.assert_not_called()
+
+
+def test_kanban_status_errors_when_no_board_found():
+    mock_client = MagicMock()
+    mock_client.current_board.return_value = None
+    mock_client.resolve_project.return_value = None
+    with patch("tools.kanban_status.get_client", return_value=mock_client):
+        result = kanban_status.kanban_status()
+    assert result["error"]["type"] == "JiraNotFoundError"

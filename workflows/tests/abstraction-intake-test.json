@@ -1,0 +1,120 @@
+{
+  "updatedAt": "2026-10-04T15:16:45.283Z",
+  "createdAt": "2026-10-04T15:13:41.193Z",
+  "id": "triageAbstractionCheck",
+  "name": "Datami — Abstraction Intake Test",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "151f0787-acd2-4b6a-8be4-c633e4d40100",
+      "name": "Manual Abstraction Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -32
+      ],
+      "parameters": {}
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "abstraction-test-message",
+              "name": "message",
+              "type": "object",
+              "value": {
+                "message_id": -2026100402,
+                "date": 1791126809,
+                "chat": {
+                  "id": 357724827,
+                  "type": "private"
+                },
+                "from": {
+                  "id": 357724827,
+                  "is_bot": false
+                },
+                "text": "اصلاح می‌کنم: شناسه مشتری دقیقاً 743 است. عبارت «مشتری تست» نام یا شناسه نیست؛ بقیه اطلاعات گزارش آزمایشی بدون تغییر است."
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -736,
+        -32
+      ],
+      "id": "15f6f4ce-e711-444d-a8df-7badf00b4d17",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "triageIntakeCore",
+          "mode": "list",
+          "cachedResultName": "Datami — Intake Core"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        -32
+      ],
+      "id": "7acff814-ab65-4ee0-9b89-e62134cd4f91",
+      "name": "Run Intake Core"
+    }
+  ],
+  "connections": {
+    "Manual Abstraction Test": {
+      "main": [
+        [
+          {
+            "node": "Telegram Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Intake Core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "4bc76fca-688d-4169-ab95-429db6153430",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

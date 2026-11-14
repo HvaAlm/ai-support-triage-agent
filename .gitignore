@@ -1,2 +1,15 @@
 .env 
 n8n_data
+__pycache__/
+*.sqlite3
+*.sqlite3-*
+data/
+.venv/
+*.egg-info/
+.serena
+.codex
+.claude
+.agents
+
+# Private migration backups contain credentials and support data.
+migration-bundles/

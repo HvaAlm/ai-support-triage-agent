@@ -1,0 +1,166 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "NEED_MORE_INFO",
+        "UNKNOWN_FEATURE",
+        "READY_FOR_REVIEW"
+      ]
+    },
+    "ready_for_investigation": {
+      "type": "boolean",
+      "enum": [
+        false
+      ]
+    },
+    "case": {
+      "type": "object",
+      "properties": {
+        "steps_to_reproduce": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "error_messages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "request_state": {
+          "type": "string",
+          "enum": [
+            "not_created",
+            "created",
+            "unknown"
+          ]
+        },
+        "collected_identifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "value"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "feature_key": {
+          "type": "string"
+        },
+        "feature_name": {
+          "type": "string"
+        },
+        "reported_feature_name": {
+          "type": "string"
+        },
+        "scenario": {
+          "type": "string",
+          "enum": [
+            "creation_failed",
+            "result_missing",
+            "incorrect_result",
+            "visibility_problem",
+            "retry_problem",
+            "other",
+            "unknown"
+          ]
+        },
+        "affected_user_id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "expected_behavior": {
+          "type": "string"
+        },
+        "actual_behavior": {
+          "type": "string"
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "environment": {
+          "type": "string"
+        },
+        "unavailable_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "feature_key",
+        "feature_name",
+        "reported_feature_name",
+        "scenario",
+        "request_state",
+        "affected_user_id",
+        "description",
+        "expected_behavior",
+        "actual_behavior",
+        "steps_to_reproduce",
+        "occurred_at",
+        "environment",
+        "error_messages",
+        "collected_identifiers",
+        "unavailable_fields",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "missing_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3
+    },
+    "review_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reply_text": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "status",
+    "ready_for_investigation",
+    "case",
+    "missing_fields",
+    "questions",
+    "review_notes",
+    "reply_text"
+  ],
+  "additionalProperties": false
+}

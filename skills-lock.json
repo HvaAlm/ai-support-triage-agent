@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "skills": {
+    "adr": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/adr/SKILL.md",
+      "computedHash": "ae1a286cebffd0a477ef6a2216e33802a58c7b1809e18dbb762e716b75ec12bd"
+    },
+    "agents-md": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/agents-md/SKILL.md",
+      "computedHash": "a138cce20aeeb1ba36b0e0fb63485ec0aee68297487e4f99461b7d1eaacde543"
+    },
+    "confluence": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence/SKILL.md",
+      "computedHash": "e61bc3fbd75084dce4d558e1ad3058bfe277eb903b57d35b6ff26979cfc972c6"
+    },
+    "confluence-add-comment": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-add-comment/SKILL.md",
+      "computedHash": "81f7ffd3ea88ab1553cf1ee9583692a8d6a7981278e2db766494c17a49d85c75"
+    },
+    "confluence-create-page": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-create-page/SKILL.md",
+      "computedHash": "fb8ac67bd44940ee40a3e397b6fed1ff125c341363c9da194f5a5ab826617d33"
+    },
+    "confluence-delete-page": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-delete-page/SKILL.md",
+      "computedHash": "c0a12e32c8898c5dba120407c1c2a8ce75557271fe2715d5e5a0dd7b8a587ad6"
+    },
+    "confluence-get-page": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-get-page/SKILL.md",
+      "computedHash": "8c0c11c21b698afc1207264468dd85662e2ef51217df22ff7a1a2f0cda11c96a"
+    },
+    "confluence-list-spaces": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-list-spaces/SKILL.md",
+      "computedHash": "5b4726cee3e15cbda9b2bbc43b74aabc2be0d0e6e1e0813ad73cbc067b8c7d01"
+    },
+    "confluence-search": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-search/SKILL.md",
+      "computedHash": "e2c3f880cf4286528189d05dfbf5f8163830b3497c886ba58a42dac6a1bdb441"
+    },
+    "confluence-update-page": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/confluence-update-page/SKILL.md",
+      "computedHash": "0cd3c54fab69963a62a740f500edbd993c992d9744c728634fc392c8946b38bb"
+    },
+    "context-sanitizer": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/context-sanitizer/SKILL.md",
+      "computedHash": "558d28616db7612d0c0b43136eb8a9ee7556eb27f43bff5364dfe8e4d408c9f9"
+    },
+    "jira": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira/SKILL.md",
+      "computedHash": "acd7877424b563a613f5e0701de11fcff7614da3cd74181b8733a8436f0e68ea"
+    },
+    "jira-blockers": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-blockers/SKILL.md",
+      "computedHash": "597938730eb7ef3d842a8477c27fe2c6b878cabafafea14fb9c05efd7cb66330"
+    },
+    "jira-board": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-board/SKILL.md",
+      "computedHash": "8fc3f987ca7937625008319519ed6152e4d4aa57d94ba94c48b26d95beba91a0"
+    },
+    "jira-create-issue": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-create-issue/SKILL.md",
+      "computedHash": "ecaa819f6418bf03471a596e580731fd817935ee11e4a30ec25f7bc31d9ae1ba"
+    },
+    "jira-edit-issue": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-edit-issue/SKILL.md",
+      "computedHash": "07b5a074b9194718c743521371bf2190be6d2f5c77146f85c1f61d21bc0080be"
+    },
+    "jira-issue-summary": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-issue-summary/SKILL.md",
+      "computedHash": "d2b23de8bb5ac370d9d22e9a40154db58765fedf99fafa70ea6ed7f57cfc0ed8"
+    },
+    "jira-issues": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-issues/SKILL.md",
+      "computedHash": "31a8d6adec7d5aa369dc6500a4e1ef2e0a9386e54b1aade304e35210a993d14e"
+    },
+    "jira-kanban-status": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-kanban-status/SKILL.md",
+      "computedHash": "8b1bf17cda0e351c05a4c9e8dcf3ffce4ede220b8a55613b8dd9fad6a4984cab"
+    },
+    "jira-log": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-log/SKILL.md",
+      "computedHash": "a3b3883f1a11979556f9abc3c94632df6e7eb71a7c5476858ae0ae5ccef2453f"
+    },
+    "jira-my-work": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-my-work/SKILL.md",
+      "computedHash": "60b2e8458cc1ca0b2ac90135711190cb83e54ea085b0778df84abcd7fa0a4251"
+    },
+    "jira-project-context": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-project-context/SKILL.md",
+      "computedHash": "def23cad307b6e8c733930888780fc07275cfedeaac3818649574dcebb7faf7a"
+    },
+    "jira-search-users": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-search-users/SKILL.md",
+      "computedHash": "8028689b78ddb51b6649d1ba82274ae8924e153cdf0f0cab9594e9e8feb60007"
+    },
+    "jira-sprint": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-sprint/SKILL.md",
+      "computedHash": "dcfcb29750f170e6c332b283c2e9f73e203f748dc1d3014991e4a617ad6b8c54"
+    },
+    "jira-status": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-status/SKILL.md",
+      "computedHash": "44bc37f431a629e75d6eaa5e5f6904d4cc55d2f1ae5a875c57c61162be7940fb"
+    },
+    "jira-track": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-track/SKILL.md",
+      "computedHash": "f1b7026efa45bd65240117af90b2c0b7758f20c9b22d5a6f0f483ca73047da3c"
+    },
+    "jira-triage": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-triage/SKILL.md",
+      "computedHash": "2436a9bf71c4eb890962ecd8c0321c0529cdb7f4db24f8bdf878e84ea3aa85fc"
+    },
+    "jira-worklog": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-worklog/SKILL.md",
+      "computedHash": "90cd09d676c6b8221756ee722bae187b0206684f3468b8b6b1a1ed5317fbaeab"
+    },
+    "jira-worklog-delete": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-worklog-delete/SKILL.md",
+      "computedHash": "6253dea80d33065bf5cfaf6e4b28c7867b5b9952f41596f3d920ebb28330fe68"
+    },
+    "jira-worklog-edit": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-worklog-edit/SKILL.md",
+      "computedHash": "661ae332f0cd83584816426853e1d8ec67a427c81f03d0def447f9762ea1349b"
+    },
+    "jira-worklog-report": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/jira-worklog-report/SKILL.md",
+      "computedHash": "913fa6e9b8b4b7d5198fc2534a3ea8e66d4e41bdde6e81df7c9ee743d70373e1"
+    },
+    "learn-fast": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/learn-fast/SKILL.md",
+      "computedHash": "e6104b633df8b5dbeffc64229d77d7bcfce6a6bf9e66c05704ed5c1b29936314"
+    },
+    "mood": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/mood/SKILL.md",
+      "computedHash": "e961ede9768de322805e1806336b0e7c579a42dcc43e895ebe13459e9a44a604"
+    },
+    "prd": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/prd/SKILL.md",
+      "computedHash": "e2502cdf43f97f570cd1879cdb047c848da74e0b1e5a1fee457ce1e886a2b632"
+    },
+    "rfc": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/rfc/SKILL.md",
+      "computedHash": "a1dfc8b21292a3b26d7e298f6f0df45dc7c2ceaa9cf8df18d75940db9c1f004e"
+    },
+    "spec-baseline": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/spec-baseline/SKILL.md",
+      "computedHash": "20a1918c1189e243a34a0c73c34859d23a67166139cada48f8a6d8c350841a02"
+    },
+    "spec-verify": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/spec-verify/SKILL.md",
+      "computedHash": "bcc0c4c774c3773b71e78f0033f46f0bfc2dc8f984b7c7137ce789288f4efa9b"
+    },
+    "strategic-compact": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/strategic-compact/SKILL.md",
+      "computedHash": "ae98ee8af71728a2e7ed72ee601a16bc23058194c1cfa0d3b4aba08f0c954194"
+    },
+    "task2code": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/task2code/SKILL.md",
+      "computedHash": "c98aa100ba40c2657f52598e661141e251cf78e84fd1e6a43d4eb857c56eb15a"
+    },
+    "trd": {
+      "source": "arfar-x/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/trd/SKILL.md",
+      "computedHash": "cf109f05301726603ce5152c599a01e4daa35ab52151215254d736521c29d7b6"
+    }
+  }
+}

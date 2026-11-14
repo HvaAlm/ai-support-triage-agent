@@ -1,0 +1,120 @@
+{
+  "updatedAt": "2026-10-05T09:20:54.444Z",
+  "createdAt": "2026-10-05T09:19:14.570Z",
+  "id": "triagePlotCheck",
+  "name": "Datami — Plot Description Intake Test",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "5f57245b-8cc4-41c3-b417-32ae7d9b4001",
+      "name": "Manual Plot Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        -32
+      ],
+      "parameters": {}
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "plot-test-message",
+              "name": "message",
+              "type": "object",
+              "value": {
+                "message_id": -2026100502,
+                "date": 1791191945,
+                "chat": {
+                  "id": 357724827,
+                  "type": "private"
+                },
+                "from": {
+                  "id": 357724827,
+                  "is_bot": false
+                },
+                "text": "روز انتخاب‌شده برای تحلیل نمودار ۴ اکتبر ۲۰۲۶ بود و درخواست مربوط به افت نمودار بود. بقیه اطلاعات گزارش آزمایشی بدون تغییر است."
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -736,
+        -32
+      ],
+      "id": "15f6f4ce-e711-444d-a8df-7badf00b4d17",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "triageIntakeCore",
+          "mode": "list",
+          "cachedResultName": "Datami — Intake Core"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        -32
+      ],
+      "id": "dd50d14c-cd67-4da5-9048-8b1721ae10bf",
+      "name": "Run Intake Core"
+    }
+  ],
+  "connections": {
+    "Manual Plot Test": {
+      "main": [
+        [
+          {
+            "node": "Telegram Trigger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Intake Core",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "89ea3728-4019-4872-b115-e18c9cf950a7",
+  "activeVersionId": null,
+  "versionCounter": 3,
+  "triggerCount": 0,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
