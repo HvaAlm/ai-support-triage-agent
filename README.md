@@ -17,12 +17,12 @@ The n8n workflows in [workflows/](workflows/) are the primary Telegram intake pa
 
 | Workflow | Role |
 | --- | --- |
-| `support-triage.json` | Telegram Trigger → allowlisted support user → `Intake Core` |
-| `intake-core.json` | Shared intake: `/new`/`/start` closes the open case; otherwise feature catalog → LLM → validation → `support_cases` → Persian reply. Failures send a Persian error reply. |
+| `support-triage.json` | Starts with the support user's Telegram message: allowlisted user → `/new`/`/start` closes the open case; otherwise feature catalog → LLM → validation → `support_cases` → Persian reply. Failures send a Persian error reply. |
 | `build-feature-catalog.json` | Proposes feature-catalog rows from the backend repository |
-| `tests/*.json` | Manual fixtures that call `Intake Core`, plus model and preparation checks |
+| `tests/abstraction-intake-test.json`, `tests/plot-intake-test.json` | Copies of the main flow where a manual trigger and a sample message replace the Telegram Trigger and allowlist. Regenerate them after changing the main flow. |
+| `tests/intake-*-check.json` | Model and preparation checks |
 
-Import edits with `n8n import:workflow`. **`Intake Core` must be re-published after every change** (`n8n publish:workflow --id=triageIntakeCore`, then restart n8n): production calls use its published version. The support-user allowlist is in the `Allowed Support User?` node.
+Import edits with `n8n import:workflow`. The support-user allowlist is in the `Allowed Support User?` node.
 
 Compose reads `POSTGRES_PASSWORD`, `N8N_ENCRYPTION_KEY`, `N8N_PUBLIC_HOST`, and `N8N_RUNNERS_AUTH_TOKEN` from `.env` (see [.env.example](.env.example)).
 
