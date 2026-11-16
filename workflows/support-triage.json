@@ -451,7 +451,7 @@
           "conditions": [
             {
               "id": "ae3962e6-2b4b-4e8f-a286-b104f6e1464b",
-              "leftValue": "={{ [\"357724827\"].includes(String($json.message.from.id)) }}",
+              "leftValue": "={{ [\"357724827\"].includes(String($json.message.from.id)) && $json.message.chat.type === 'private' }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -2449,9 +2449,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "ccc539df-ab75-4b4b-a678-a0ca6de0f7d4",
+  "versionId": "be4ee226-56ad-451a-8ce9-a49a107482bd",
   "activeVersionId": null,
-  "versionCounter": 286,
+  "versionCounter": 287,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
