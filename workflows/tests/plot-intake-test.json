@@ -1681,7 +1681,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { row, is_new } = $('Link Issue').first().json;\nconst output = $('Apply Triage Rules').first().json.output;\nconst c = output.case;\nconst TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\nconst PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\nconst ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n\nconst BREAK = '\\u0000';  // blank line between header and details\nconst header = is_new\n  ? `🆕 مشکل جدید برای تیم ${TEAM[row.team] || row.team || 'نامشخص'}`\n  : `🔁 این مشکل به ${row.case_count} گزارش رسید (تیم ${TEAM[row.team] || row.team || 'نامشخص'})`;\nconst lines = [\n  header,\n  `«${row.title}»`,\n  `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority}`,\n  `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n  BREAK,\n  c.description && `شرح: ${c.description}`,\n  c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n  c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n  list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n  list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n  c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n  ids && `شناسه‌ها: ${ids}`,\n  c.occurred_at && `زمان: ${c.occurred_at}`,\n  c.environment && `محیط: ${c.environment}`,\n  photos && `تصویر: ${photos}`,\n  output.triage?.team_reason && `دلیل انتخاب تیم: ${output.triage.team_reason}`,\n].filter(Boolean).map(line => (line === BREAK ? '' : line));\nconst text = lines.join('\\n').slice(0, 4000);\n\n// One message per active recipient whose team is \"all\" or this issue's team.\nreturn $input.all()\n  .map(item => item.json)\n  .filter(r => r.chat_id && (r.team === 'all' || r.team === row.team))\n  .map(r => ({ json: { chat_id: String(r.chat_id), text } }));\n"
+        "jsCode": "const { row, is_new } = $('Link Issue').first().json;\nconst output = $('Apply Triage Rules').first().json.output;\nconst c = output.case;\nconst TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\nconst PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\nconst ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n\nconst BREAK = '\\u0000';  // blank line between header and details\nconst header = is_new\n  ? `🆕 مشکل جدید برای تیم ${TEAM[row.team] || row.team || 'نامشخص'}`\n  : `🔁 این مشکل به ${row.case_count} گزارش رسید (تیم ${TEAM[row.team] || row.team || 'نامشخص'})`;\nconst lines = [\n  header,\n  `«${row.title}»`,\n  `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority}`,\n  `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n  BREAK,\n  c.description && `شرح: ${c.description}`,\n  c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n  c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n  list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n  list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n  c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n  ids && `شناسه‌ها: ${ids}`,\n  c.occurred_at && `زمان: ${c.occurred_at}`,\n  c.environment && `محیط: ${c.environment}`,\n  photos && `تصویر: ${photos}`,\n  output.triage?.team_reason && `دلیل انتخاب تیم: ${output.triage.team_reason}`,\n].filter(Boolean).map(line => (line === BREAK ? '' : line));\nconst text = lines.join('\\n').slice(0, 4000);\n\n// One message per active recipient whose team is \"all\" or this issue's team.\nreturn $input.all()\n  .map(item => item.json)\n  .filter(r => r.chat_id && (r.team === 'all' || r.team === row.team))\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  .map(r => ({ json: { chat_id: String(r.chat_id), thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id), text } }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1701,12 +1701,71 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        3300,
+        3520,
         -1060
       ],
       "id": "0cfc748d-3c6f-400d-8d43-9fb0b503c808",
       "name": "Send Tech Notification",
       "webhookId": "e3cee363-4ebd-4bbc-859e-81696df67e9e",
+      "credentials": {
+        "telegramApi": {
+          "id": "bQcIL3ySFgpKZa9v",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6f35fb9f-d910-423a-9a51-1b1502a45ba6",
+              "leftValue": "={{ Boolean($json.thread_id) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3300,
+        -1160
+      ],
+      "id": "b6d53e77-8847-4f11-b31a-283f85e3db3f",
+      "name": "Has Topic?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "message_thread_id": "={{ Number($json.thread_id) }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3520,
+        -1260
+      ],
+      "id": "1c149b1c-4eda-4c5e-87af-840c242906da",
+      "name": "Send Tech Notification (Topic)",
+      "webhookId": "9434fb43-9759-4bca-9c0f-09f3d1bcbc77",
       "credentials": {
         "telegramApi": {
           "id": "bQcIL3ySFgpKZa9v",
@@ -2398,6 +2457,24 @@
       "main": [
         [
           {
+            "node": "Has Topic?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Topic?": {
+      "main": [
+        [
+          {
+            "node": "Send Tech Notification (Topic)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
             "node": "Send Tech Notification",
             "type": "main",
             "index": 0
@@ -2438,9 +2515,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "2e55bebc-23b6-46fa-8bd4-213a4dd91a70",
+  "versionId": "fdad4b1e-6dda-455d-9324-eb045940485d",
   "activeVersionId": null,
-  "versionCounter": 285,
+  "versionCounter": 287,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
