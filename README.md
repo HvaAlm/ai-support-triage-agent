@@ -17,7 +17,7 @@ The n8n workflows in [workflows/](workflows/) are the primary Telegram intake pa
 
 | Workflow | Role |
 | --- | --- |
-| `support-triage.json` | Starts with the support user's Telegram message: allowlisted user → `/new`/`/start` closes the open case; otherwise feature catalog → LLM → validation → `support_cases` → Persian reply. Failures send a Persian error reply. |
+| `support-triage.json` | Starts with the support user's Telegram message: allowlisted user → `/new`/`/start` closes the open case; otherwise feature catalog → photo description (when a photo or image file is attached) → LLM → validation → `support_cases` → Persian reply. Failures send a Persian error reply. |
 | `build-feature-catalog.json` | Lists every user-facing backend feature, then analyses each one (one agent run per feature) and saves evidence-backed proposals to `feature_catalog_proposals` as `pending_review`. Features with an existing proposal are skipped, so a re-run resumes; `analysis_failed` rows are retried. Approved proposals must be copied to `feature_catalog_draft` with `active=true` before intake uses them. |
 | `tests/abstraction-intake-test.json`, `tests/plot-intake-test.json` | Copies of the main flow where a manual trigger and a sample message replace the Telegram Trigger and allowlist. Regenerate them after changing the main flow. |
 | `tests/intake-*-check.json` | Model and preparation checks |
