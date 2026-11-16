@@ -358,9 +358,10 @@
     {
       "parameters": {
         "chatId": "={{ $('Prepare Intake Input').first().json.chat_id }}",
-        "text": "={{ $('Finalize Case').first().json.output.reply_text }}",
+        "text": "={{ String($('Finalize Case').first().json.output.reply_text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -518,7 +519,8 @@
         "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "باشه، گزارش قبلی بسته شد. مشکل جدید رو برام توضیح بدید.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -542,7 +544,8 @@
         "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "ببخشید، موقع بررسی پیامتون یه مشکلی پیش اومد. لطفاً دوباره بفرستید، یا اگه درست نشد /new رو بزنید و از اول شروع کنید.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -859,7 +862,8 @@
         "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "گرفتم 👍 اگه توضیح یا عکس دیگه‌ای هم دارید بفرستید. یه دقیقه که پیام جدیدی نیاد، یا هر وقت /done رو فرستادید، بررسیش می‌کنم.",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -1602,9 +1606,10 @@
     {
       "parameters": {
         "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
-        "text": "={{ $json.text }}",
+        "text": "={{ String($json.text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -1658,9 +1663,10 @@
     {
       "parameters": {
         "chatId": "={{ $json.chat_id }}",
-        "text": "={{ $json.text }}",
+        "text": "={{ String($json.text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
         "additionalFields": {
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -1717,10 +1723,11 @@
     {
       "parameters": {
         "chatId": "={{ $json.chat_id }}",
-        "text": "={{ $json.text }}",
+        "text": "={{ String($json.text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
         "additionalFields": {
           "message_thread_id": "={{ Number($json.thread_id) }}",
-          "appendAttribution": false
+          "appendAttribution": false,
+          "parse_mode": "HTML"
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -1878,8 +1885,10 @@
         "messageType": "message",
         "chatId": "={{ $json.chat_id }}",
         "messageId": "={{ $json.message_id }}",
-        "text": "={{ $json.text }}",
-        "additionalFields": {}
+        "text": "={{ String($json.text ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -2736,9 +2745,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "e7b467b5-6564-4028-b1b7-23f521717350",
+  "versionId": "be2fa73b-dacc-4c1a-b56c-6761a1b9babb",
   "activeVersionId": null,
-  "versionCounter": 290,
+  "versionCounter": 291,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
