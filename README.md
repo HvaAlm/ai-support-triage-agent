@@ -22,6 +22,8 @@ The n8n workflows in [workflows/](workflows/) are the primary Telegram intake pa
 | `tests/abstraction-intake-test.json`, `tests/plot-intake-test.json` | Copies of the main flow where a manual trigger and a sample message replace the Telegram Trigger and allowlist. Regenerate them after changing the main flow. |
 | `tests/intake-*-check.json` | Model and preparation checks |
 
+For local testing, `scripts/start-tunnel.sh` starts a Cloudflare quick tunnel, writes its address to `N8N_PUBLIC_HOST` in `.env`, and publishes the intake workflow so Telegram delivers every message; re-run it after a reboot (the address changes). On a server, set `N8N_PUBLIC_HOST` to the server's domain instead.
+
 Import edits with `n8n import:workflow`. The support-user allowlist is in the `Allowed Support User?` node.
 
 Compose reads `POSTGRES_PASSWORD`, `N8N_ENCRYPTION_KEY`, `N8N_PUBLIC_HOST`, and `N8N_RUNNERS_AUTH_TOKEN` from `.env` (see [.env.example](.env.example)).
