@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-18T10:31:58.981Z",
+  "updatedAt": "2026-11-16T09:44:19.801Z",
   "createdAt": "2026-09-06T15:17:48.700Z",
   "id": "triageAbstractionCheck",
   "name": "Datami — Abstraction Intake Test",
@@ -29,11 +29,11 @@
       ],
       "id": "639931f6-0d8d-4cd3-85d4-8a151fa56ac6",
       "name": "Basic LLM Chain",
-      "notes": "Intake only. Output is under output. READY_FOR_REVIEW is provisional; investigation remains disabled until case storage and deterministic readiness validation are connected.",
-      "onError": "continueErrorOutput",
       "retryOnFail": true,
       "maxTries": 2,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput",
+      "notes": "Intake only. Output is under output. READY_FOR_REVIEW is provisional; investigation remains disabled until case storage and deterministic readiness validation are connected."
     },
     {
       "parameters": {
@@ -108,7 +108,7 @@
     {
       "parameters": {
         "language": "pythonNative",
-        "pythonCode": "import json\n\ninput_data = _items[0][\"json\"]\n\nopen_cases = input_data.get(\"open_cases\", [])\n\nif not isinstance(open_cases, list):\n    raise ValueError(\"open_cases must be an array.\")\n\nif len(open_cases) > 1:\n    raise ValueError(\n        \"Multiple open cases found for this support person and chat.\"\n    )\n\nexisting_case_id = \"\"\nprevious_case_data = {}\n\nif open_cases:\n    existing_case = open_cases[0]\n    existing_case_id = existing_case[\"case_id\"]\n\n    raw_case = existing_case.get(\"case_data\")\n\n    if not raw_case:\n        raise ValueError(\"The existing case has no saved case_data.\")\n\n    try:\n        previous_case_data = (\n            json.loads(raw_case)\n            if isinstance(raw_case, str)\n            else raw_case\n        )\n    except json.JSONDecodeError as exc:\n        raise ValueError(\"Saved case_data contains invalid JSON.\") from exc\n\n    if not isinstance(previous_case_data, dict):\n        raise ValueError(\"Saved case_data must be an object.\")\nraw_catalog = input_data.get(\"feature_catalog_draft\")\n\nif not isinstance(raw_catalog, list) or not raw_catalog:\n    raise ValueError(\"No active features were loaded.\")\n\n\ndef parse_array(value, field, feature_key):\n    if value is None or value == \"\":\n        return []\n\n    if isinstance(value, str):\n        try:\n            value = json.loads(value)\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.{field}\"\n            ) from exc\n\n    if not isinstance(value, list):\n        raise ValueError(\n            f\"Expected an array in {feature_key}.{field}\"\n        )\n\n    return value\n\n\narray_fields = [\n    \"required_identifiers\",\n    \"search_terms\",\n    \"repositories\",\n    \"evidence\",\n    \"uncertainties\",\n]\n\nfeature_catalog = []\n\nfor row in raw_catalog:\n    if not isinstance(row, dict) or not row.get(\"feature_key\"):\n        raise ValueError(\"A catalog row has no feature_key.\")\n\n    feature_key = row[\"feature_key\"]\n\n    feature = {\n        \"feature_key\": feature_key,\n        \"display_name_fa\": row.get(\"display_name_fa\", \"\"),\n        \"display_name_en\": row.get(\"display_name_en\", \"\"),\n        \"description\": row.get(\"description\", \"\"),\n    }\n\n    for field in array_fields:\n        feature[field] = parse_array(\n            row.get(field), field, feature_key\n        )\n\n    raw_rules = row.get(\"intake_rules\")\n\n    if raw_rules is None or raw_rules == \"\":\n        intake_rules = {\"version\": 1, \"rules\": []}\n    else:\n        try:\n            intake_rules = (\n                json.loads(raw_rules)\n                if isinstance(raw_rules, str)\n                else raw_rules\n            )\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.intake_rules\"\n            ) from exc\n\n        if not isinstance(intake_rules, dict):\n            raise ValueError(\n                f\"{feature_key}.intake_rules must be an object.\"\n            )\n\n        if intake_rules.get(\"version\") != 1:\n            raise ValueError(\n                f\"Unsupported intake_rules version for {feature_key}.\"\n            )\n\n        rules = intake_rules.get(\"rules\")\n        if not isinstance(rules, list):\n            raise ValueError(\n                f\"{feature_key}.intake_rules.rules must be an array.\"\n            )\n\n        if not all(isinstance(rule, dict) for rule in rules):\n            raise ValueError(\n                f\"Each intake rule for {feature_key} must be an object.\"\n            )\n\n    feature[\"intake_rules\"] = intake_rules\n\n    feature_catalog.append(feature)\n\nmessage = input_data.get(\"telegram_message\")\n\nif not isinstance(message, dict):\n    raise ValueError(\"Missing Telegram message.\")\n\nchat_id = (message.get(\"chat\") or {}).get(\"id\")\nsupport_user_id = (message.get(\"from\") or {}).get(\"id\")\n\nif chat_id is None or support_user_id is None:\n    raise ValueError(\"Missing Telegram chat or sender information.\")\n\nphotos = [\n    photo for photo in (message.get(\"photos\") or [])\n    if isinstance(photo, dict) and photo.get(\"file_id\")\n]\n\nreturn [{\n    \"json\": {\n        \"chat_id\": str(chat_id),\n        \"support_user_id\": str(support_user_id),\n        \"message_id\": message.get(\"message_id\"),\n        \"message_text\": (\n            message.get(\"text\") or message.get(\"caption\") or \"\"\n        ),\n        \"has_photo\": bool(photos),\n        \"photo_count\": len(photos),\n        \"photo_files\": [\n            photo for photo in photos if (photo.get(\"file_size\") or 0) <= 3_500_000\n        ],\n        \"feature_catalog_draft\": feature_catalog,\n        \"case_id\": existing_case_id,\n        \"previous_case_data\": previous_case_data,\n    }\n}]"
+        "pythonCode": "import json\n\ninput_data = _items[0][\"json\"]\n\nopen_cases = input_data.get(\"open_cases\", [])\n\nif not isinstance(open_cases, list):\n    raise ValueError(\"open_cases must be an array.\")\n\nif len(open_cases) > 1:\n    raise ValueError(\n        \"Multiple open cases found for this support person and chat.\"\n    )\n\nexisting_case_id = \"\"\nprevious_case_data = {}\n\nif open_cases:\n    existing_case = open_cases[0]\n    existing_case_id = existing_case[\"case_id\"]\n\n    raw_case = existing_case.get(\"case_data\")\n\n    if not raw_case:\n        raise ValueError(\"The existing case has no saved case_data.\")\n\n    try:\n        previous_case_data = (\n            json.loads(raw_case)\n            if isinstance(raw_case, str)\n            else raw_case\n        )\n    except json.JSONDecodeError as exc:\n        raise ValueError(\"Saved case_data contains invalid JSON.\") from exc\n\n    if not isinstance(previous_case_data, dict):\n        raise ValueError(\"Saved case_data must be an object.\")\nraw_catalog = input_data.get(\"feature_catalog_draft\")\n\nif not isinstance(raw_catalog, list) or not raw_catalog:\n    raise ValueError(\"No active features were loaded.\")\n\n\ndef parse_array(value, field, feature_key):\n    if value is None or value == \"\":\n        return []\n\n    if isinstance(value, str):\n        try:\n            value = json.loads(value)\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.{field}\"\n            ) from exc\n\n    if not isinstance(value, list):\n        raise ValueError(\n            f\"Expected an array in {feature_key}.{field}\"\n        )\n\n    return value\n\n\n# evidence, uncertainties and repositories are for catalog review; the intake model does not need them.\narray_fields = [\n    \"required_identifiers\",\n    \"search_terms\",\n]\n\nfeature_catalog = []\n\nfor row in raw_catalog:\n    if not isinstance(row, dict) or not row.get(\"feature_key\"):\n        raise ValueError(\"A catalog row has no feature_key.\")\n\n    feature_key = row[\"feature_key\"]\n\n    feature = {\n        \"feature_key\": feature_key,\n        \"display_name_fa\": row.get(\"display_name_fa\", \"\"),\n        \"display_name_en\": row.get(\"display_name_en\", \"\"),\n        \"description\": row.get(\"description\", \"\"),\n    }\n\n    for field in array_fields:\n        feature[field] = parse_array(\n            row.get(field), field, feature_key\n        )\n\n    raw_rules = row.get(\"intake_rules\")\n\n    if raw_rules is None or raw_rules == \"\":\n        intake_rules = {\"version\": 1, \"rules\": []}\n    else:\n        try:\n            intake_rules = (\n                json.loads(raw_rules)\n                if isinstance(raw_rules, str)\n                else raw_rules\n            )\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.intake_rules\"\n            ) from exc\n\n        if not isinstance(intake_rules, dict):\n            raise ValueError(\n                f\"{feature_key}.intake_rules must be an object.\"\n            )\n\n        if intake_rules.get(\"version\") != 1:\n            raise ValueError(\n                f\"Unsupported intake_rules version for {feature_key}.\"\n            )\n\n        rules = intake_rules.get(\"rules\")\n        if not isinstance(rules, list):\n            raise ValueError(\n                f\"{feature_key}.intake_rules.rules must be an array.\"\n            )\n\n        if not all(isinstance(rule, dict) for rule in rules):\n            raise ValueError(\n                f\"Each intake rule for {feature_key} must be an object.\"\n            )\n\n    feature[\"intake_rules\"] = intake_rules\n\n    feature_catalog.append(feature)\n\nmessage = input_data.get(\"telegram_message\")\n\nif not isinstance(message, dict):\n    raise ValueError(\"Missing Telegram message.\")\n\nchat_id = (message.get(\"chat\") or {}).get(\"id\")\nsupport_user_id = (message.get(\"from\") or {}).get(\"id\")\n\nif chat_id is None or support_user_id is None:\n    raise ValueError(\"Missing Telegram chat or sender information.\")\n\nphotos = [\n    photo for photo in (message.get(\"photos\") or [])\n    if isinstance(photo, dict) and photo.get(\"file_id\")\n]\n\nreturn [{\n    \"json\": {\n        \"chat_id\": str(chat_id),\n        \"support_user_id\": str(support_user_id),\n        \"message_id\": message.get(\"message_id\"),\n        \"message_text\": (\n            message.get(\"text\") or message.get(\"caption\") or \"\"\n        ),\n        \"has_photo\": bool(photos),\n        \"photo_count\": len(photos),\n        \"photo_files\": [\n            photo for photo in photos if (photo.get(\"file_size\") or 0) <= 3_500_000\n        ],\n        \"feature_catalog_draft\": feature_catalog,\n        \"case_id\": existing_case_id,\n        \"previous_case_data\": previous_case_data,\n    }\n}]"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -411,7 +411,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -760,
+        -752,
         -32
       ],
       "id": "9bc9113c-8820-4275-b7e7-66f8d960b167",
@@ -559,9 +559,7 @@
     {
       "parameters": {
         "resource": "file",
-        "operation": "get",
         "fileId": "={{ $json.photo_file_id }}",
-        "download": true,
         "additionalFields": {}
       },
       "type": "n8n-nodes-base.telegram",
@@ -573,16 +571,16 @@
       "id": "453e8d04-2e19-44b1-92e2-14563d25c303",
       "name": "Download Photo",
       "webhookId": "92ba9f81-099f-42c1-8e71-0ecf75965ec2",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
       "credentials": {
         "telegramApi": {
           "id": "bQcIL3ySFgpKZa9v",
           "name": "Telegram account"
         }
       },
-      "onError": "continueRegularOutput",
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 2000
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -595,9 +593,7 @@
             },
             {
               "type": "HumanMessagePromptTemplate",
-              "messageType": "imageBinary",
-              "binaryImageDataKey": "data",
-              "imageDetail": "auto"
+              "messageType": "imageBinary"
             }
           ]
         },
@@ -606,15 +602,15 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
       "position": [
-        880,
-        -400
+        704,
+        -624
       ],
       "id": "15f7fbba-5f05-4821-88ec-f5183dbf3417",
       "name": "Describe Photo",
-      "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -623,8 +619,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1104,
-        -400
+        1200,
+        -608
       ],
       "id": "0518b7f4-9f49-4e6b-aaa5-f01dea89d03c",
       "name": "Add Photo Description"
@@ -657,8 +653,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -520,
-        160
+        -384,
+        -464
       ],
       "id": "63fb6ed6-76e5-48a1-a0dc-bdf80de12736",
       "name": "Is Done Command?"
@@ -691,7 +687,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        -280,
+        -272,
         352
       ],
       "id": "6bf977be-00d2-4f24-957a-7b506eebfac5",
@@ -778,7 +774,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        -60,
+        -64,
         352
       ],
       "id": "de27244d-e28f-40a1-88c0-6c7280119df4",
@@ -828,7 +824,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        380,
+        384,
         256
       ],
       "id": "7934710f-5b17-4cd9-9ea4-e06829932f95",
@@ -843,14 +839,12 @@
     },
     {
       "parameters": {
-        "resume": "timeInterval",
-        "amount": 60,
-        "unit": "seconds"
+        "amount": 10
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        600,
+        608,
         352
       ],
       "id": "c99582ab-ab7c-444e-8148-a0e4eb8331b5",
@@ -885,8 +879,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        820,
-        160
+        1024,
+        -144
       ],
       "id": "cbe73a6b-982d-4819-9646-30913a1f4233",
       "name": "Load Buffered Messages",
@@ -928,7 +922,6 @@
               "condition": "isFalse"
             },
             {
-              "keyName": "id",
               "condition": "lte",
               "keyValue": "={{ $json.buffer_max_id }}"
             }
@@ -960,7 +953,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1260,
+        1264,
         160
       ],
       "id": "9ee6d9f3-cfa1-40ff-af25-1667152608d6",
@@ -1420,10 +1413,10 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "ffa62d47-c5f1-4980-93bb-a78b553ed1b4",
+  "versionId": "102f6aa0-0a0b-4ebe-958d-063789a8ad23",
   "activeVersionId": null,
-  "versionCounter": 268,
-  "triggerCount": 0,
+  "versionCounter": 273,
+  "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
   "versionMetadata": {
