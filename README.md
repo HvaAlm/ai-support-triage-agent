@@ -24,7 +24,9 @@ The n8n workflows in [workflows/](workflows/) are the primary Telegram intake pa
 
 For local testing, `scripts/start-tunnel.sh` starts a Cloudflare quick tunnel, writes its address to `N8N_PUBLIC_HOST` in `.env`, and publishes the intake workflow so Telegram delivers every message; re-run it after a reboot (the address changes). On a server, set `N8N_PUBLIC_HOST` to the server's domain instead.
 
-Import edits with `n8n import:workflow`. The support-user allowlist is in the `Allowed Support User?` node.
+**Issues and reports.** When a report is ready for review it is classified (team, priority) and compared with open issues of the same feature in the `issues` data table: the same problem increases that issue's `case_count`, a new one creates an `ISS-…` issue with its feature, code modules, team, kind of problem and priority. Send `/report` to the bot for counts by team, module, feature and kind of problem, the most repeated issues, and new issues of the last 7 days. Each case keeps the support/bot conversation, which both models see.
+
+Import edits with `n8n import:workflow`. Reload open n8n editor tabs after an import: saving from an old tab overwrites it. The support-user allowlist is in the `Allowed Support User?` node.
 
 Compose reads `POSTGRES_PASSWORD`, `N8N_ENCRYPTION_KEY`, `N8N_PUBLIC_HOST`, and `N8N_RUNNERS_AUTH_TOKEN` from `.env` (see [.env.example](.env.example)).
 
