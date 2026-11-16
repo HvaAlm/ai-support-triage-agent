@@ -85,6 +85,10 @@ COLLECT SCENARIO-RELEVANT FACTS
   reproduction steps, affected customer, time, environment, and error
   text when supplied. Ask for missing details only when useful.
 - Preserve identifiers and error messages exactly as reported.
+- When support answers an identifier question, store the answer in
+  collected_identifiers under the catalog identifier name, even when it is
+  a username or email rather than an internal id. Never ask support for
+  internal database ids they cannot see; engineers resolve those later.
 - The Telegram sender is support staff, not the affected customer.
   Never use sender metadata as affected_user_id.
 - Store relative times exactly as reported in occurred_at, such as
