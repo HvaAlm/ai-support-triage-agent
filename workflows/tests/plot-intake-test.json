@@ -10,7 +10,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Latest support message:\n{{ $json.message_text }}\n\nPhoto attached:\n{{ $json.has_photo }}\n\nPhoto description (written by an image model from the attached image; empty when there is no photo or it could not be analyzed):\n{{ $json.photo_description || '' }}\n\nFeature catalog:\n{{ JSON.stringify($json.feature_catalog_draft) }}\n\nPrevious complete intake output (empty object for a new case):\n{{ JSON.stringify($json.previous_case_data || {}) }}",
+        "text": "=Latest support messages (everything sent since the last reply, oldest first):\n{{ $json.message_text }}\n\nPhotos attached:\n{{ $json.photo_count || 0 }}\n\nPhoto descriptions (written by an image model from the attached images; empty when there is no photo or it could not be analyzed):\n{{ $json.photo_description || '' }}\n\nFeature catalog:\n{{ JSON.stringify($json.feature_catalog_draft) }}\n\nPrevious complete intake output (empty object for a new case):\n{{ JSON.stringify($json.previous_case_data || {}) }}",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -108,7 +108,7 @@
     {
       "parameters": {
         "language": "pythonNative",
-        "pythonCode": "import json\n\ninput_data = _items[0][\"json\"]\n\nopen_cases = input_data.get(\"open_cases\", [])\n\nif not isinstance(open_cases, list):\n    raise ValueError(\"open_cases must be an array.\")\n\nif len(open_cases) > 1:\n    raise ValueError(\n        \"Multiple open cases found for this support person and chat.\"\n    )\n\nexisting_case_id = \"\"\nprevious_case_data = {}\n\nif open_cases:\n    existing_case = open_cases[0]\n    existing_case_id = existing_case[\"case_id\"]\n\n    raw_case = existing_case.get(\"case_data\")\n\n    if not raw_case:\n        raise ValueError(\"The existing case has no saved case_data.\")\n\n    try:\n        previous_case_data = (\n            json.loads(raw_case)\n            if isinstance(raw_case, str)\n            else raw_case\n        )\n    except json.JSONDecodeError as exc:\n        raise ValueError(\"Saved case_data contains invalid JSON.\") from exc\n\n    if not isinstance(previous_case_data, dict):\n        raise ValueError(\"Saved case_data must be an object.\")\nraw_catalog = input_data.get(\"feature_catalog_draft\")\n\nif not isinstance(raw_catalog, list) or not raw_catalog:\n    raise ValueError(\"No active features were loaded.\")\n\n\ndef parse_array(value, field, feature_key):\n    if value is None or value == \"\":\n        return []\n\n    if isinstance(value, str):\n        try:\n            value = json.loads(value)\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.{field}\"\n            ) from exc\n\n    if not isinstance(value, list):\n        raise ValueError(\n            f\"Expected an array in {feature_key}.{field}\"\n        )\n\n    return value\n\n\narray_fields = [\n    \"required_identifiers\",\n    \"search_terms\",\n    \"repositories\",\n    \"evidence\",\n    \"uncertainties\",\n]\n\nfeature_catalog = []\n\nfor row in raw_catalog:\n    if not isinstance(row, dict) or not row.get(\"feature_key\"):\n        raise ValueError(\"A catalog row has no feature_key.\")\n\n    feature_key = row[\"feature_key\"]\n\n    feature = {\n        \"feature_key\": feature_key,\n        \"display_name_fa\": row.get(\"display_name_fa\", \"\"),\n        \"display_name_en\": row.get(\"display_name_en\", \"\"),\n        \"description\": row.get(\"description\", \"\"),\n    }\n\n    for field in array_fields:\n        feature[field] = parse_array(\n            row.get(field), field, feature_key\n        )\n\n    raw_rules = row.get(\"intake_rules\")\n\n    if raw_rules is None or raw_rules == \"\":\n        intake_rules = {\"version\": 1, \"rules\": []}\n    else:\n        try:\n            intake_rules = (\n                json.loads(raw_rules)\n                if isinstance(raw_rules, str)\n                else raw_rules\n            )\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.intake_rules\"\n            ) from exc\n\n        if not isinstance(intake_rules, dict):\n            raise ValueError(\n                f\"{feature_key}.intake_rules must be an object.\"\n            )\n\n        if intake_rules.get(\"version\") != 1:\n            raise ValueError(\n                f\"Unsupported intake_rules version for {feature_key}.\"\n            )\n\n        rules = intake_rules.get(\"rules\")\n        if not isinstance(rules, list):\n            raise ValueError(\n                f\"{feature_key}.intake_rules.rules must be an array.\"\n            )\n\n        if not all(isinstance(rule, dict) for rule in rules):\n            raise ValueError(\n                f\"Each intake rule for {feature_key} must be an object.\"\n            )\n\n    feature[\"intake_rules\"] = intake_rules\n\n    feature_catalog.append(feature)\n\nmessage = input_data.get(\"telegram_message\")\n\nif not isinstance(message, dict):\n    raise ValueError(\"Missing Telegram message.\")\n\nchat_id = (message.get(\"chat\") or {}).get(\"id\")\nsupport_user_id = (message.get(\"from\") or {}).get(\"id\")\n\nif chat_id is None or support_user_id is None:\n    raise ValueError(\"Missing Telegram chat or sender information.\")\n\nphotos = message.get(\"photo\")\ndocument = message.get(\"document\") or {}\nimage_document = str(document.get(\"mime_type\", \"\")).startswith(\"image/\")\n# Telegram lists photo sizes smallest first; the last is the largest.\nphoto = photos[-1] if isinstance(photos, list) and photos else (document if image_document else {})\n\nreturn [{\n    \"json\": {\n        \"chat_id\": str(chat_id),\n        \"support_user_id\": str(support_user_id),\n        \"message_id\": message.get(\"message_id\"),\n        \"message_text\": (\n            message.get(\"text\") or message.get(\"caption\") or \"\"\n        ),\n        \"has_photo\": bool(photo.get(\"file_id\")),\n        \"photo_file_id\": photo.get(\"file_id\", \"\"),\n        \"photo_file_size\": photo.get(\"file_size\") or 0,\n        \"feature_catalog_draft\": feature_catalog,\n        \"case_id\": existing_case_id,\n        \"previous_case_data\": previous_case_data,\n    }\n}]"
+        "pythonCode": "import json\n\ninput_data = _items[0][\"json\"]\n\nopen_cases = input_data.get(\"open_cases\", [])\n\nif not isinstance(open_cases, list):\n    raise ValueError(\"open_cases must be an array.\")\n\nif len(open_cases) > 1:\n    raise ValueError(\n        \"Multiple open cases found for this support person and chat.\"\n    )\n\nexisting_case_id = \"\"\nprevious_case_data = {}\n\nif open_cases:\n    existing_case = open_cases[0]\n    existing_case_id = existing_case[\"case_id\"]\n\n    raw_case = existing_case.get(\"case_data\")\n\n    if not raw_case:\n        raise ValueError(\"The existing case has no saved case_data.\")\n\n    try:\n        previous_case_data = (\n            json.loads(raw_case)\n            if isinstance(raw_case, str)\n            else raw_case\n        )\n    except json.JSONDecodeError as exc:\n        raise ValueError(\"Saved case_data contains invalid JSON.\") from exc\n\n    if not isinstance(previous_case_data, dict):\n        raise ValueError(\"Saved case_data must be an object.\")\nraw_catalog = input_data.get(\"feature_catalog_draft\")\n\nif not isinstance(raw_catalog, list) or not raw_catalog:\n    raise ValueError(\"No active features were loaded.\")\n\n\ndef parse_array(value, field, feature_key):\n    if value is None or value == \"\":\n        return []\n\n    if isinstance(value, str):\n        try:\n            value = json.loads(value)\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.{field}\"\n            ) from exc\n\n    if not isinstance(value, list):\n        raise ValueError(\n            f\"Expected an array in {feature_key}.{field}\"\n        )\n\n    return value\n\n\narray_fields = [\n    \"required_identifiers\",\n    \"search_terms\",\n    \"repositories\",\n    \"evidence\",\n    \"uncertainties\",\n]\n\nfeature_catalog = []\n\nfor row in raw_catalog:\n    if not isinstance(row, dict) or not row.get(\"feature_key\"):\n        raise ValueError(\"A catalog row has no feature_key.\")\n\n    feature_key = row[\"feature_key\"]\n\n    feature = {\n        \"feature_key\": feature_key,\n        \"display_name_fa\": row.get(\"display_name_fa\", \"\"),\n        \"display_name_en\": row.get(\"display_name_en\", \"\"),\n        \"description\": row.get(\"description\", \"\"),\n    }\n\n    for field in array_fields:\n        feature[field] = parse_array(\n            row.get(field), field, feature_key\n        )\n\n    raw_rules = row.get(\"intake_rules\")\n\n    if raw_rules is None or raw_rules == \"\":\n        intake_rules = {\"version\": 1, \"rules\": []}\n    else:\n        try:\n            intake_rules = (\n                json.loads(raw_rules)\n                if isinstance(raw_rules, str)\n                else raw_rules\n            )\n        except json.JSONDecodeError as exc:\n            raise ValueError(\n                f\"Invalid JSON in {feature_key}.intake_rules\"\n            ) from exc\n\n        if not isinstance(intake_rules, dict):\n            raise ValueError(\n                f\"{feature_key}.intake_rules must be an object.\"\n            )\n\n        if intake_rules.get(\"version\") != 1:\n            raise ValueError(\n                f\"Unsupported intake_rules version for {feature_key}.\"\n            )\n\n        rules = intake_rules.get(\"rules\")\n        if not isinstance(rules, list):\n            raise ValueError(\n                f\"{feature_key}.intake_rules.rules must be an array.\"\n            )\n\n        if not all(isinstance(rule, dict) for rule in rules):\n            raise ValueError(\n                f\"Each intake rule for {feature_key} must be an object.\"\n            )\n\n    feature[\"intake_rules\"] = intake_rules\n\n    feature_catalog.append(feature)\n\nmessage = input_data.get(\"telegram_message\")\n\nif not isinstance(message, dict):\n    raise ValueError(\"Missing Telegram message.\")\n\nchat_id = (message.get(\"chat\") or {}).get(\"id\")\nsupport_user_id = (message.get(\"from\") or {}).get(\"id\")\n\nif chat_id is None or support_user_id is None:\n    raise ValueError(\"Missing Telegram chat or sender information.\")\n\nphotos = [\n    photo for photo in (message.get(\"photos\") or [])\n    if isinstance(photo, dict) and photo.get(\"file_id\")\n]\n\nreturn [{\n    \"json\": {\n        \"chat_id\": str(chat_id),\n        \"support_user_id\": str(support_user_id),\n        \"message_id\": message.get(\"message_id\"),\n        \"message_text\": (\n            message.get(\"text\") or message.get(\"caption\") or \"\"\n        ),\n        \"has_photo\": bool(photos),\n        \"photo_count\": len(photos),\n        \"photo_files\": [\n            photo for photo in photos if (photo.get(\"file_size\") or 0) <= 3_500_000\n        ],\n        \"feature_catalog_draft\": feature_catalog,\n        \"case_id\": existing_case_id,\n        \"previous_case_data\": previous_case_data,\n    }\n}]"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -149,11 +149,11 @@
           "conditions": [
             {
               "keyName": "chat_id",
-              "keyValue": "={{ String($json.message.chat.id) }}"
+              "keyValue": "={{ String($('Combine Messages').first().json.message.chat.id) }}"
             },
             {
               "keyName": "support_user_id",
-              "keyValue": "={{ String($json.message.from.id) }}"
+              "keyValue": "={{ String($('Combine Messages').first().json.message.from.id) }}"
             },
             {
               "keyName": "is_open",
@@ -171,7 +171,8 @@
       ],
       "id": "5b0e3368-c081-487c-abbd-bf8cca6fb2d6",
       "name": "Get Open Case",
-      "alwaysOutputData": true
+      "alwaysOutputData": true,
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -180,7 +181,7 @@
             {
               "id": "36914d29-caf0-497a-a270-d653384dbcb2",
               "name": "telegram_message",
-              "value": "={{ $('Telegram Trigger').first().json.message }}",
+              "value": "={{ $('Combine Messages').first().json.message }}",
               "type": "object"
             },
             {
@@ -533,7 +534,7 @@
           "conditions": [
             {
               "id": "727fb34c-4d4d-44a1-a997-d9de3e79c8ef",
-              "leftValue": "={{ Boolean($json.has_photo && $json.photo_file_id && $json.photo_file_size <= 3500000) }}",
+              "leftValue": "={{ $json.photo_files.length > 0 }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -578,7 +579,7 @@
           "name": "Telegram account"
         }
       },
-      "onError": "continueErrorOutput",
+      "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000
@@ -610,14 +611,14 @@
       ],
       "id": "15f7fbba-5f05-4821-88ec-f5183dbf3417",
       "name": "Describe Photo",
-      "onError": "continueErrorOutput",
+      "onError": "continueRegularOutput",
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000
     },
     {
       "parameters": {
-        "jsCode": "const intake = $('Prepare Intake Input').first().json;\nconst description = $input.first().json.text;\n// Download or vision errors arrive here too: continue the report without a description.\nreturn [{ json: {\n  ...intake,\n  photo_description: typeof description === 'string' ? description.trim() : '',\n} }];\n"
+        "jsCode": "const intake = $('Prepare Intake Input').first().json;\n// Failed downloads or descriptions arrive with an error instead of text.\nconst descriptions = $input.all().map((item, index) => {\n  const text = typeof item.json.text === 'string' ? item.json.text.trim() : '';\n  return `Photo ${index + 1}: ${text || '(could not be analyzed)'}`;\n});\nconst tooLarge = intake.photo_count - intake.photo_files.length;\nif (tooLarge > 0) descriptions.push(`${tooLarge} more photo(s) were too large to analyze.`);\nreturn [{ json: { ...intake, photo_description: descriptions.join('\\n\\n') } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -627,6 +628,358 @@
       ],
       "id": "0518b7f4-9f49-4e6b-aaa5-f01dea89d03c",
       "name": "Add Photo Description"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3f1910f8-7e73-4770-8c4b-421c4202c726",
+              "leftValue": "={{ ($json.message.text || '').trim().split(/[\\s@]/)[0] === '/done' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -520,
+        160
+      ],
+      "id": "63fb6ed6-76e5-48a1-a0dc-bdf80de12736",
+      "name": "Is Done Command?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "H0R8BMdahTc8XkpM",
+          "mode": "list",
+          "cachedResultName": "message_buffer",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/H0R8BMdahTc8XkpM"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}"
+            },
+            {
+              "keyName": "processed",
+              "condition": "isFalse"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -280,
+        352
+      ],
+      "id": "6bf977be-00d2-4f24-957a-7b506eebfac5",
+      "name": "Get Pending Messages",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "H0R8BMdahTc8XkpM",
+          "mode": "list",
+          "cachedResultName": "message_buffer",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/H0R8BMdahTc8XkpM"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chat_id": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+            "support_user_id": "={{ String($('Telegram Trigger').first().json.message.from.id) }}",
+            "message_id": "={{ String($('Telegram Trigger').first().json.message.message_id) }}",
+            "message_json": "={{ JSON.stringify($('Telegram Trigger').first().json.message) }}",
+            "processed": false
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "support_user_id",
+              "displayName": "support_user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_json",
+              "displayName": "message_json",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "processed",
+              "displayName": "processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -60,
+        352
+      ],
+      "id": "de27244d-e28f-40a1-88c0-6c7280119df4",
+      "name": "Save To Buffer",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d9fd6d3c-af7b-4801-b78b-e2150837b04e",
+              "leftValue": "={{ $('Get Pending Messages').all().filter(item => item.json.id).length === 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        160,
+        352
+      ],
+      "id": "5a97731d-fd81-4954-ae76-24e765891ec2",
+      "name": "Is First In Burst?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+        "text": "دریافت شد. اگر توضیح یا تصویر دیگری دارید همین حالا بفرستید. بعد از 60 ثانیه بدون پیام جدید، یا با ارسال /done، گزارش بررسی می‌شود.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        380,
+        256
+      ],
+      "id": "7934710f-5b17-4cd9-9ea4-e06829932f95",
+      "name": "Send Collecting Ack",
+      "webhookId": "7dc749d0-bba4-4a3e-b280-6a3eb934ff07",
+      "credentials": {
+        "telegramApi": {
+          "id": "bQcIL3ySFgpKZa9v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        352
+      ],
+      "id": "c99582ab-ab7c-444e-8148-a0e4eb8331b5",
+      "name": "Wait For More Messages",
+      "webhookId": "d839fed8-c50f-4fde-a8e1-270e700db89e"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "H0R8BMdahTc8XkpM",
+          "mode": "list",
+          "cachedResultName": "message_buffer",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/H0R8BMdahTc8XkpM"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}"
+            },
+            {
+              "keyName": "processed",
+              "condition": "isFalse"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        820,
+        160
+      ],
+      "id": "cbe73a6b-982d-4819-9646-30913a1f4233",
+      "name": "Load Buffered Messages",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all()\n  .map(item => item.json)\n  .filter(row => row.id)\n  .sort((a, b) => a.id - b.id);\nif (rows.length === 0) return [];  // already processed by /done or a newer run\n\n// After the quiet time, only the run for the newest message processes the batch.\nconst saved = $('Save To Buffer');\nif (saved.isExecuted && rows[rows.length - 1].id !== saved.first().json.id) return [];\n\nconst messages = rows.map(row => JSON.parse(row.message_json));\nconst last = messages[messages.length - 1];\nconst photos = [];\nfor (const message of messages) {\n  if (Array.isArray(message.photo) && message.photo.length) {\n    photos.push(message.photo[message.photo.length - 1]);  // largest size is last\n  } else if (String(message.document?.mime_type || '').startsWith('image/')) {\n    photos.push(message.document);\n  }\n}\n\nreturn [{ json: {\n  buffer_max_id: rows[rows.length - 1].id,\n  message: {\n    message_id: last.message_id,\n    chat: last.chat,\n    from: last.from,\n    date: last.date,\n    text: messages.map(m => (m.text || m.caption || '').trim()).filter(Boolean).join('\\n'),\n    photos: photos.map(p => ({ file_id: p.file_id, file_size: p.file_size || 0 })),\n  },\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        160
+      ],
+      "id": "b77a22f9-981f-45a7-9ab2-03d29873284e",
+      "name": "Combine Messages"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "H0R8BMdahTc8XkpM",
+          "mode": "list",
+          "cachedResultName": "message_buffer",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/H0R8BMdahTc8XkpM"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ String($json.message.chat.id) }}"
+            },
+            {
+              "keyName": "processed",
+              "condition": "isFalse"
+            },
+            {
+              "keyName": "id",
+              "condition": "lte",
+              "keyValue": "={{ $json.buffer_max_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "processed": true
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "processed",
+              "displayName": "processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1260,
+        160
+      ],
+      "id": "9ee6d9f3-cfa1-40ff-af25-1667152608d6",
+      "name": "Mark Messages Processed",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.photo_files.map(photo => ({ json: { photo_file_id: photo.file_id } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -400
+      ],
+      "id": "1949a9d7-40a9-452a-830a-bded9c86b1f1",
+      "name": "Split Photos"
     },
     {
       "id": "5f57245b-8cc4-41c3-b417-32ae7d9b4001",
@@ -841,7 +1194,7 @@
         ],
         [
           {
-            "node": "Get Open Case",
+            "node": "Is Done Command?",
             "type": "main",
             "index": 0
           }
@@ -863,7 +1216,7 @@
       "main": [
         [
           {
-            "node": "Download Photo",
+            "node": "Split Photos",
             "type": "main",
             "index": 0
           }
@@ -885,25 +1238,11 @@
             "type": "main",
             "index": 0
           }
-        ],
-        [
-          {
-            "node": "Add Photo Description",
-            "type": "main",
-            "index": 0
-          }
         ]
       ]
     },
     "Describe Photo": {
       "main": [
-        [
-          {
-            "node": "Add Photo Description",
-            "type": "main",
-            "index": 0
-          }
-        ],
         [
           {
             "node": "Add Photo Description",
@@ -918,6 +1257,130 @@
         [
           {
             "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Done Command?": {
+      "main": [
+        [
+          {
+            "node": "Load Buffered Messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Pending Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Messages": {
+      "main": [
+        [
+          {
+            "node": "Save To Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save To Buffer": {
+      "main": [
+        [
+          {
+            "node": "Is First In Burst?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is First In Burst?": {
+      "main": [
+        [
+          {
+            "node": "Send Collecting Ack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait For More Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Collecting Ack": {
+      "main": [
+        [
+          {
+            "node": "Wait For More Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait For More Messages": {
+      "main": [
+        [
+          {
+            "node": "Load Buffered Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Buffered Messages": {
+      "main": [
+        [
+          {
+            "node": "Combine Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Messages": {
+      "main": [
+        [
+          {
+            "node": "Mark Messages Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Messages Processed": {
+      "main": [
+        [
+          {
+            "node": "Get Open Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Photos": {
+      "main": [
+        [
+          {
+            "node": "Download Photo",
             "type": "main",
             "index": 0
           }
@@ -957,9 +1420,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "b7cfc70c-a753-426b-8c55-d54e2dd4d83d",
+  "versionId": "9349ccdf-a8b1-47b1-aca0-1cd456f56adf",
   "activeVersionId": null,
-  "versionCounter": 267,
+  "versionCounter": 268,
   "triggerCount": 0,
   "sourceWorkflowId": null,
   "tags": [],
