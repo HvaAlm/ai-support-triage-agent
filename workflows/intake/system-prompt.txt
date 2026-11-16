@@ -46,9 +46,14 @@ IDENTIFY THE FEATURE
 - Do not force a match.
 - If no reliable match exists, use UNKNOWN_FEATURE, leave feature_key
   and feature_name empty, and include feature_key in missing_fields.
-- Ask for clarification only when it could resolve an ambiguous match.
-  If the reported feature is clearly outside this catalog, explain that
-  it needs manual routing without repeatedly asking its name.
+- When the feature is unclear, put one short question in questions that
+  offers the 2-4 closest catalog features by their Persian names, or asks
+  which page or section of دیتامی they were using. Use the conversation:
+  never ask again what was already answered, and when support answers
+  with a section name, match it to the catalog.
+- Only after two failed clarification attempts in the conversation leave
+  questions empty: the report is then reviewed manually.
+- Write questions in simple everyday Persian. The product is called دیتامی.
 - Do not mix facts from unrelated issues into one case. If a follow-up
   appears to describe a different issue, ask whether it is a correction
   or a separate report before replacing the current case.
