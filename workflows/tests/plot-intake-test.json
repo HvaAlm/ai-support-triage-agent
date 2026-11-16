@@ -359,7 +359,9 @@
       "parameters": {
         "chatId": "={{ $('Prepare Intake Input').first().json.chat_id }}",
         "text": "={{ $('Finalize Case').first().json.output.reply_text }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -428,7 +430,7 @@
           "conditions": [
             {
               "id": "e484fde6-c6d5-4726-9c59-5f1cef5b7acf",
-              "leftValue": "={{ ['/new', '/start'].includes(($json.message.text || '').trim().split(/[\\s@]/)[0]) }}",
+              "leftValue": "={{ ['/new', '/start'].includes((($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0]) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -465,11 +467,11 @@
           "conditions": [
             {
               "keyName": "chat_id",
-              "keyValue": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}"
+              "keyValue": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}"
             },
             {
               "keyName": "support_user_id",
-              "keyValue": "={{ String($('Telegram Trigger').first().json.message.from.id) }}"
+              "keyValue": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).from.id) }}"
             },
             {
               "keyName": "is_open",
@@ -513,9 +515,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+        "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "باشه، گزارش قبلی بسته شد. مشکل جدید رو برام توضیح بدید.",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -535,9 +539,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+        "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "ببخشید، موقع بررسی پیامتون یه مشکلی پیش اومد. لطفاً دوباره بفرستید، یا اگه درست نشد /new رو بزنید و از اول شروع کنید.",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -670,7 +676,7 @@
           "conditions": [
             {
               "id": "3f1910f8-7e73-4770-8c4b-421c4202c726",
-              "leftValue": "={{ ($json.message.text || '').trim().split(/[\\s@]/)[0] === '/done' }}",
+              "leftValue": "={{ (($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0] === '/done' }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -707,7 +713,7 @@
           "conditions": [
             {
               "keyName": "chat_id",
-              "keyValue": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}"
+              "keyValue": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}"
             },
             {
               "keyName": "processed",
@@ -740,10 +746,10 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "chat_id": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
-            "support_user_id": "={{ String($('Telegram Trigger').first().json.message.from.id) }}",
-            "message_id": "={{ String($('Telegram Trigger').first().json.message.message_id) }}",
-            "message_json": "={{ JSON.stringify($('Telegram Trigger').first().json.message) }}",
+            "chat_id": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
+            "support_user_id": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).from.id) }}",
+            "message_id": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).message_id) }}",
+            "message_json": "={{ JSON.stringify(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message)) }}",
             "processed": false
           },
           "matchingColumns": [],
@@ -850,9 +856,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+        "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "گرفتم 👍 اگه توضیح یا عکس دیگه‌ای هم دارید بفرستید. یه دقیقه که پیام جدیدی نیاد، یا هر وقت /done رو فرستادید، بررسیش می‌کنم.",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -899,7 +907,7 @@
           "conditions": [
             {
               "keyName": "chat_id",
-              "keyValue": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}"
+              "keyValue": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}"
             },
             {
               "keyName": "processed",
@@ -922,7 +930,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const rows = $input.all()\n  .map(item => item.json)\n  .filter(row => row.id)\n  .sort((a, b) => a.id - b.id);\nif (rows.length === 0) return [];  // already processed by /done or a newer run\n\n// After the quiet time, only the run for the newest message processes the batch.\nconst saved = $('Save To Buffer');\nif (saved.isExecuted && rows[rows.length - 1].id !== saved.first().json.id) return [];\n\nconst messages = rows.map(row => JSON.parse(row.message_json));\nconst last = messages[messages.length - 1];\nconst photos = [];\nfor (const message of messages) {\n  if (Array.isArray(message.photo) && message.photo.length) {\n    photos.push(message.photo[message.photo.length - 1]);  // largest size is last\n  } else if (String(message.document?.mime_type || '').startsWith('image/')) {\n    photos.push(message.document);\n  }\n}\n\nreturn [{ json: {\n  buffer_max_id: rows[rows.length - 1].id,\n  message: {\n    message_id: last.message_id,\n    chat: last.chat,\n    from: last.from,\n    date: last.date,\n    text: messages.map(m => (m.text || m.caption || '').trim()).filter(Boolean).join('\\n'),\n    photos: photos.map(p => ({ file_id: p.file_id, file_size: p.file_size || 0 })),\n  },\n} }];\n"
+        "jsCode": "const rows = $input.all()\n  .map(item => item.json)\n  .filter(row => row.id)\n  .sort((a, b) => a.id - b.id);\nif (rows.length === 0) return [];  // already processed by /done or a newer run\n\n// After the quiet time, only the run for the newest message processes the batch.\nconst saved = $('Save To Buffer');\nif (saved.isExecuted && rows[rows.length - 1].id !== saved.first().json.id) return [];\n\nconst messages = rows.map(row => JSON.parse(row.message_json));\nconst last = messages[messages.length - 1];\nconst photos = [];\nfor (const message of messages) {\n  if (Array.isArray(message.photo) && message.photo.length) {\n    photos.push(message.photo[message.photo.length - 1]);  // largest size is last\n  } else if (String(message.document?.mime_type || '').startsWith('image/')) {\n    photos.push(message.document);\n  }\n}\n\nreturn [{ json: {\n  buffer_max_id: rows[rows.length - 1].id,\n  message: {\n    message_id: last.message_id,\n    chat: last.chat,\n    from: last.from,\n    date: last.date,\n    // Telegram edits arrive as new buffered messages with edit_date.\n    text: messages.map(m => ((m.text || m.caption || '').trim()\n      ? (m.edit_date ? '[ویرایش پیام قبلی] ' : '') + (m.text || m.caption).trim() : ''))\n      .filter(Boolean).join('\\n'),\n    photos: photos.map(p => ({ file_id: p.file_id, file_size: p.file_size || 0 })),\n  },\n} }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1148,7 +1156,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const intake = $('Prepare Intake Input').first().json;\nconst item = JSON.parse(JSON.stringify($('Case Before Reply').first().json));\nconst output = item.output;\nconst composed = $input.first().json.text;\n// Compose failures fall back to the validation template.\nconst reply = (typeof composed === 'string' && composed.trim())\n  || output.reply_text + (output.status === 'READY_FOR_REVIEW' ? '\\n\\nبرای ثبت گزارش جدید /new را بفرستید.' : '');\noutput.reply_text = reply;\n\nconst now = new Date().toISOString();\nconst said = [intake.message_text, intake.photo_count ? `[${intake.photo_count} عکس]` : '']\n  .filter(Boolean).join(' ');\noutput.transcript = [\n  ...(intake.transcript || []),\n  ...(said ? [{ role: 'support', text: said, at: now }] : []),\n  { role: 'bot', text: reply, at: now },\n].slice(-20);\nreturn [{ json: item }];\n"
+        "jsCode": "const intake = $('Prepare Intake Input').first().json;\nconst item = JSON.parse(JSON.stringify($('Case Before Reply').first().json));\nconst output = item.output;\nconst composed = $input.first().json.text;\n// Compose failures fall back to the validation template.\nconst reply = (typeof composed === 'string' && composed.trim())\n  || output.reply_text + (output.status === 'READY_FOR_REVIEW' ? '\\n\\nبرای ثبت گزارش جدید /new را بفرستید.' : '');\n// A linked case stays linked (and keeps its team/priority) while support corrects it.\nconst previous = intake.previous_case_data || {};\nif (!output.issue && previous.issue) output.issue = previous.issue;\nif (!output.triage && previous.triage) output.triage = previous.triage;\noutput.reply_text = reply;\n\nconst now = new Date().toISOString();\nconst said = [intake.message_text, intake.photo_count ? `[${intake.photo_count} عکس]` : '']\n  .filter(Boolean).join(' ');\noutput.transcript = [\n  ...(intake.transcript || []),\n  ...(said ? [{ role: 'support', text: said, at: now }] : []),\n  { role: 'bot', text: reply, at: now },\n].slice(-20);\nreturn [{ json: item }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1533,7 +1541,7 @@
           "conditions": [
             {
               "id": "eb7d0eab-d064-4412-970b-d2b87090053a",
-              "leftValue": "={{ ($json.message.text || '').trim().split(/[\\s@]/)[0] === '/report' }}",
+              "leftValue": "={{ (($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0] === '/report' }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -1593,9 +1601,11 @@
     },
     {
       "parameters": {
-        "chatId": "={{ String($('Telegram Trigger').first().json.message.chat.id) }}",
+        "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
         "text": "={{ $json.text }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -1681,7 +1691,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { row, is_new } = $('Link Issue').first().json;\nconst output = $('Apply Triage Rules').first().json.output;\nconst c = output.case;\nconst TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\nconst PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\nconst ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n\nconst BREAK = '\\u0000';  // blank line between header and details\nconst header = is_new\n  ? `🆕 مشکل جدید برای تیم ${TEAM[row.team] || row.team || 'نامشخص'}`\n  : `🔁 این مشکل به ${row.case_count} گزارش رسید (تیم ${TEAM[row.team] || row.team || 'نامشخص'})`;\nconst lines = [\n  header,\n  `«${row.title}»`,\n  `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority}`,\n  `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n  BREAK,\n  c.description && `شرح: ${c.description}`,\n  c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n  c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n  list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n  list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n  c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n  ids && `شناسه‌ها: ${ids}`,\n  c.occurred_at && `زمان: ${c.occurred_at}`,\n  c.environment && `محیط: ${c.environment}`,\n  photos && `تصویر: ${photos}`,\n  output.triage?.team_reason && `دلیل انتخاب تیم: ${output.triage.team_reason}`,\n].filter(Boolean).map(line => (line === BREAK ? '' : line));\nconst text = lines.join('\\n').slice(0, 4000);\n\n// One message per active recipient whose team is \"all\" or this issue's team.\nreturn $input.all()\n  .map(item => item.json)\n  .filter(r => r.chat_id && (r.team === 'all' || r.team === row.team))\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  .map(r => ({ json: { chat_id: String(r.chat_id), thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id), text } }));\n"
+        "jsCode": "function formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\nconst { row, is_new } = $('Link Issue').first().json;\nconst output = $('Apply Triage Rules').first().json.output;\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst kind = is_new ? 'new' : `repeat:${row.case_count}`;\nconst text = formatIssueMessage({ kind, row, c: output.case, triage: output.triage, photos });\n\n// One message per active recipient whose team is \"all\" or this issue's team.\nreturn $input.all()\n  .map(item => item.json)\n  .filter(r => r.chat_id && (r.team === 'all' || r.team === row.team))\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  .map(r => ({ json: {\n    chat_id: String(r.chat_id),\n    thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id),\n    text,\n  } }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1696,7 +1706,9 @@
       "parameters": {
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.text }}",
-        "additionalFields": {}
+        "additionalFields": {
+          "appendAttribution": false
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
@@ -1754,7 +1766,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.text }}",
         "additionalFields": {
-          "message_thread_id": "={{ Number($json.thread_id) }}"
+          "message_thread_id": "={{ Number($json.thread_id) }}",
+          "appendAttribution": false
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -1766,6 +1779,177 @@
       "id": "1c149b1c-4eda-4c5e-87af-840c242906da",
       "name": "Send Tech Notification (Topic)",
       "webhookId": "9434fb43-9759-4bca-9c0f-09f3d1bcbc77",
+      "credentials": {
+        "telegramApi": {
+          "id": "bQcIL3ySFgpKZa9v",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const { row, is_new } = $('Link Issue').first().json;\nconst intake = $('Prepare Intake Input').first().json;\nconst caseId = intake.case_id || `case_${intake.chat_id}_${intake.support_user_id}_${intake.message_id}`;\nconst kind = is_new ? 'new' : `repeat:${row.case_count}`;\n// Failed sends carry an error instead of a message; only sent messages can be edited later.\nreturn $input.all()\n  .map(item => item.json.result || item.json)\n  .filter(message => message && message.message_id && message.chat)\n  .map(message => ({ json: {\n    case_id: caseId,\n    issue_key: row.issue_key,\n    chat_id: String(message.chat.id),\n    message_id: String(message.message_id),\n    kind,\n  } }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3740,
+        -1160
+      ],
+      "id": "3a62ea12-74d9-4ad8-8728-924307a190fa",
+      "name": "Collect Sent Messages"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "jtCqG0g4ioovGTEz",
+          "mode": "list",
+          "cachedResultName": "tech_messages",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/jtCqG0g4ioovGTEz"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "case_id": "={{ $json.case_id }}",
+            "issue_key": "={{ $json.issue_key }}",
+            "chat_id": "={{ $json.chat_id }}",
+            "message_id": "={{ $json.message_id }}",
+            "kind": "={{ $json.kind }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "case_id",
+              "displayName": "case_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "issue_key",
+              "displayName": "issue_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        3960,
+        -1160
+      ],
+      "id": "d4afbfc5-3c24-4877-98ff-133e44b28a2a",
+      "name": "Save Tech Message Refs",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "jtCqG0g4ioovGTEz",
+          "mode": "list",
+          "cachedResultName": "tech_messages",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/jtCqG0g4ioovGTEz"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "case_id",
+              "keyValue": "={{ $json.case_id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        160
+      ],
+      "id": "b40f661a-09e9-4303-8048-44d7506a8e91",
+      "name": "Load Tech Messages",
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "function formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\nconst refs = $input.all().map(item => item.json).filter(ref => ref.message_id);\nif (refs.length === 0) return [];  // this report was never posted to the tech team\n\nconst output = $('Finalize Case').first().json.output;\nconst intake = $('Prepare Intake Input').first().json;\nconst issue = output.issue || {};\nconst triage = output.triage || {};\nconst feature = intake.feature_catalog_draft.find(f => f.feature_key === output.case.feature_key) || {};\nconst row = {\n  issue_key: issue.issue_key || refs[0].issue_key,\n  title: issue.title || '',\n  team: triage.team,\n  priority: triage.priority,\n  feature_name: output.case.feature_name,\n  modules: (feature.modules || []).join(', '),\n  case_count: issue.count,\n};\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst edited = new Date().toLocaleString('fa-IR', {\n  timeZone: 'Asia/Tehran', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',\n});\nconst incomplete = output.status !== 'READY_FOR_REVIEW';\nreturn refs.map(ref => ({ json: {\n  chat_id: ref.chat_id,\n  message_id: ref.message_id,\n  text: formatIssueMessage({ kind: ref.kind, row, c: output.case, triage, photos, edited, incomplete }),\n} }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2460,
+        160
+      ],
+      "id": "87630762-e3ca-47e5-aa6c-0d1ff17b13d1",
+      "name": "Build Tech Edits"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "editMessageText",
+        "messageType": "message",
+        "chatId": "={{ $json.chat_id }}",
+        "messageId": "={{ $json.message_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2680,
+        160
+      ],
+      "id": "1977b992-0cbf-4475-a2e5-5c061f96b0e4",
+      "name": "Edit Tech Message",
+      "webhookId": "2eea6d19-72cf-4978-ad9e-1ed4ecf33a59",
       "credentials": {
         "telegramApi": {
           "id": "bQcIL3ySFgpKZa9v",
@@ -1949,6 +2133,11 @@
         [
           {
             "node": "Send Intake Reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load Tech Messages",
             "type": "main",
             "index": 0
           }
@@ -2482,6 +2671,61 @@
         ]
       ]
     },
+    "Send Tech Notification": {
+      "main": [
+        [
+          {
+            "node": "Collect Sent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Tech Notification (Topic)": {
+      "main": [
+        [
+          {
+            "node": "Collect Sent Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Sent Messages": {
+      "main": [
+        [
+          {
+            "node": "Save Tech Message Refs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Tech Messages": {
+      "main": [
+        [
+          {
+            "node": "Build Tech Edits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Tech Edits": {
+      "main": [
+        [
+          {
+            "node": "Edit Tech Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Manual Plot Test": {
       "main": [
         [
@@ -2515,9 +2759,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "fdad4b1e-6dda-455d-9324-eb045940485d",
+  "versionId": "7ace6d85-69e4-4ea6-a42f-1063ad70a009",
   "activeVersionId": null,
-  "versionCounter": 287,
+  "versionCounter": 288,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
