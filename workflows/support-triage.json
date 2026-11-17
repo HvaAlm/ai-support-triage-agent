@@ -1807,7 +1807,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const planned = $('Plan Tech Messages').first().json;\n// Failed sends carry an error instead of a message; only sent messages can be edited later.\nreturn $input.all()\n  .map(item => item.json.result || item.json)\n  .filter(message => message && message.message_id && message.chat)\n  .map(message => ({ json: {\n    case_id: planned.case_id,\n    issue_key: planned.issue_key,\n    chat_id: String(message.chat.id),\n    message_id: String(message.message_id),\n    kind: planned.kind,\n  } }));\n"
+        "jsCode": "// Failed sends carry an error instead of a message; only sent messages can be edited later.\nreturn $input.all()\n  .map((item, index) => ({ message: item.json.result || item.json, plan: $('Plan Tech Messages').itemMatching(index).json }))\n  .filter(({ message }) => message && message.message_id && message.chat)\n  .map(({ message, plan }) => ({ json: {\n    case_id: plan.case_id,\n    issue_key: plan.issue_key,\n    chat_id: String(message.chat.id),\n    message_id: String(message.message_id),\n    kind: plan.kind,\n  } }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1918,8 +1918,8 @@
         "filters": {
           "conditions": [
             {
-              "keyName": "case_id",
-              "keyValue": "={{ $json.case_id }}"
+              "keyName": "issue_key",
+              "keyValue": "={{ $('Finalize Case').first().json.output.issue?.issue_key || '-' }}"
             }
           ]
         },
@@ -1967,7 +1967,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\nconst refs = $('Load Tech Messages').all().map(item => item.json).filter(ref => ref.message_id);\nconst recipients = $input.all().map(item => item.json).filter(r => r.chat_id);\nconst output = $('Finalize Case').first().json.output;\nconst intake = $('Prepare Intake Input').first().json;\nconst issue = output.issue;\nif (!issue || !issue.issue_key) return [];  // not linked to an issue yet\n\nconst triage = output.triage || {};\nconst feature = intake.feature_catalog_draft.find(f => f.feature_key === output.case.feature_key) || {};\nconst row = {\n  issue_key: issue.issue_key,\n  title: issue.title || '',\n  team: triage.team,\n  priority: triage.priority,\n  feature_name: output.case.feature_name,\n  modules: (feature.modules || []).join(', '),\n  case_count: issue.count,\n};\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst caseId = $('Save Support Case').first().json.case_id;\n\n// Already posted: edit those messages with the latest details.\nif (refs.length) {\n  const edited = new Date().toLocaleString('fa-IR', {\n    timeZone: 'Asia/Tehran', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',\n  });\n  const incomplete = output.status !== 'READY_FOR_REVIEW';\n  return refs.map(ref => ({ json: {\n    action: 'edit',\n    chat_id: ref.chat_id,\n    message_id: ref.message_id,\n    text: formatIssueMessage({ kind: ref.kind, row, c: output.case, triage, photos, edited, incomplete }),\n  } }));\n}\n\n// Not posted yet: post when this report created its issue, or just took it to a repeat milestone.\nif (output.status !== 'READY_FOR_REVIEW') return [];\nconst link = $('Link Issue');\nconst milestone = link.isExecuted && !link.first().json.is_new\n  && [3, 5, 10, 20].includes(Number(link.first().json.row.case_count));\nif (!issue.is_new && !milestone) return [];\nconst kind = issue.is_new ? 'new' : `repeat:${issue.count}`;\nconst text = formatIssueMessage({ kind, row, c: output.case, triage, photos });\nreturn recipients\n  .filter(r => r.team === 'all' || r.team === row.team)\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  .map(r => ({ json: {\n    action: 'send',\n    chat_id: String(r.chat_id),\n    thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id),\n    text,\n    case_id: caseId,\n    issue_key: row.issue_key,\n    kind,\n  } }));\n"
+        "jsCode": "function formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    `تعداد گزارش‌ها: ${row.case_count || 1}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\nconst refs = $('Load Tech Messages').all().map(item => item.json).filter(ref => ref.message_id);\nconst recipients = $input.all().map(item => item.json).filter(r => r.chat_id);\nconst output = $('Finalize Case').first().json.output;\nconst intake = $('Prepare Intake Input').first().json;\nconst issue = output.issue;\nif (!issue || !issue.issue_key) return [];  // not linked to an issue yet\n\nconst stored = $('Load Issue Row').all().map(item => item.json).find(r => r.issue_key === issue.issue_key) || {};\nconst triage = output.triage || {};\nconst feature = intake.feature_catalog_draft.find(f => f.feature_key === output.case.feature_key) || {};\nconst row = {\n  issue_key: issue.issue_key,\n  title: stored.title || issue.title || '',\n  team: stored.team || triage.team,\n  priority: stored.priority || triage.priority,\n  feature_name: stored.feature_name || output.case.feature_name,\n  modules: stored.modules || (feature.modules || []).join(', '),\n  case_count: Number(stored.case_count) || Number(issue.count) || 1,\n};\nconst photos = $('Add Photo Description').isExecuted ? $('Add Photo Description').first().json.photo_description : '';\nconst caseId = $('Save Support Case').first().json.case_id;\nconst ready = output.status === 'READY_FOR_REVIEW';\nconst base = { case_id: caseId, issue_key: row.issue_key };\nconst plans = [];\n\n// Every post of this issue shows the latest report and count (Telegram edits are silent).\nconst edited = new Date().toLocaleString('fa-IR', {\n  timeZone: 'Asia/Tehran', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',\n});\nfor (const ref of refs) {\n  plans.push({ json: { ...base, action: 'edit', chat_id: String(ref.chat_id), message_id: ref.message_id, kind: ref.kind,\n    text: formatIssueMessage({ kind: ref.kind, row, c: output.case, triage, photos, edited, incomplete: !ready }) } });\n}\nif (!ready) return plans;\n\nconst targets = recipients.filter(r => r.team === 'all' || r.team === row.team);\nconst send = (r, kind) => ({ json: { ...base, action: 'send', kind,\n  chat_id: String(r.chat_id),\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id),\n  text: formatIssueMessage({ kind, row, c: output.case, triage, photos }) } });\n\n// Post the issue where it has no message yet (first report, or an earlier post failed).\nconst posted = new Set(refs.map(ref => String(ref.chat_id)));\nfor (const r of targets) if (!posted.has(String(r.chat_id))) plans.push(send(r, 'new'));\n\n// Repeat milestones get a new message so the group is notified.\nconst link = $('Link Issue');\nconst milestone = link.isExecuted && !link.first().json.is_new && [3, 5, 10, 20].includes(row.case_count);\nif (milestone) for (const r of targets.filter(t => posted.has(String(t.chat_id)))) plans.push(send(r, `repeat:${row.case_count}`));\nreturn plans;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2011,6 +2011,38 @@
       ],
       "id": "3abc0c54-bd27-47b3-bd71-e73e1efdad5a",
       "name": "Is Edit?"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "Wl184KGjsNA9S9CH",
+          "mode": "list",
+          "cachedResultName": "issues",
+          "cachedResultUrl": "/projects/eHsSMvOKNy5C5lgw/datatables/Wl184KGjsNA9S9CH"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "issue_key",
+              "keyValue": "={{ $('Finalize Case').first().json.output.issue?.issue_key || '-' }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2350,
+        0
+      ],
+      "id": "fc15a98f-c4ed-4fa5-99c3-52174f8ec74a",
+      "name": "Load Issue Row",
+      "alwaysOutputData": true,
+      "executeOnce": true
     }
   ],
   "connections": {
@@ -2710,7 +2742,7 @@
       "main": [
         [
           {
-            "node": "Load Tech Recipients",
+            "node": "Load Issue Row",
             "type": "main",
             "index": 0
           }
@@ -2745,6 +2777,17 @@
           }
         ]
       ]
+    },
+    "Load Issue Row": {
+      "main": [
+        [
+          {
+            "node": "Load Tech Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2757,9 +2800,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "41a912cc-37ad-4bb4-a35d-e8bcb4f76d0d",
-  "activeVersionId": "41a912cc-37ad-4bb4-a35d-e8bcb4f76d0d",
-  "versionCounter": 292,
+  "versionId": "7922b399-4a6d-4768-a2a4-e7cbab41ea57",
+  "activeVersionId": "7922b399-4a6d-4768-a2a4-e7cbab41ea57",
+  "versionCounter": 293,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
