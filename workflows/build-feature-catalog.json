@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-14T13:45:42.894Z",
+  "updatedAt": "2026-11-17T11:06:10.021Z",
   "createdAt": "2026-09-13T12:55:31.189Z",
   "id": "eBWYmWPlDz42Rupf",
   "name": "Build Feature Catalog",
@@ -408,7 +408,7 @@
     {
       "parameters": {
         "language": "pythonNative",
-        "pythonCode": "import json\n\nTOOL_CALL_BUDGET = 54\n\n# Which repository this run analyses: \"backend\" or \"frontend\".\nREPOSITORY = \"frontend\"\nREPOSITORIES = {\n    \"backend\": {\"project_id\": 1399, \"ref\": \"rc\", \"kind\": \"backend API (Laravel modules)\"},\n    \"frontend\": {\"project_id\": 2102, \"ref\": \"development\",\n                 \"kind\": \"frontend web app (monorepo: apps/ and packages/)\"},\n}\n\ncatalog = []\nfor item in _items:\n    row = item[\"json\"]\n    if not row.get(\"feature_key\"):\n        continue\n    entry = dict(row)\n    for field in [\"required_identifiers\", \"search_terms\", \"repositories\", \"evidence\", \"uncertainties\", \"intake_rules\"]:\n        value = entry.get(field)\n        if isinstance(value, str) and value.strip():\n            entry[field] = json.loads(value)\n    catalog.append(entry)\n\ncatalog.sort(key=lambda entry: entry[\"feature_key\"])\n\nreturn [{\"json\": {\n    \"tool_call_budget\": TOOL_CALL_BUDGET,\n    \"existing_catalog\": catalog,\n    \"existing_feature_keys\": [entry[\"feature_key\"] for entry in catalog],\n    \"repository\": REPOSITORY,\n    \"repository_kind\": REPOSITORIES[REPOSITORY][\"kind\"],\n    \"project_id\": REPOSITORIES[REPOSITORY][\"project_id\"],\n    \"source_ref\": REPOSITORIES[REPOSITORY][\"ref\"]\n}}]\n"
+        "pythonCode": "import json\n\nTOOL_CALL_BUDGET = 54\n\n# Which repository this run analyses: \"backend\" or \"frontend\".\nREPOSITORY = \"backend\"\nREPOSITORIES = {\n    \"backend\": {\"project_id\": 1399, \"ref\": \"rc\", \"kind\": \"backend API (Laravel modules)\"},\n    \"frontend\": {\"project_id\": 2102, \"ref\": \"development\",\n                 \"kind\": \"frontend web app (monorepo: apps/ and packages/)\"},\n}\n\ncatalog = []\nfor item in _items:\n    row = item[\"json\"]\n    if not row.get(\"feature_key\"):\n        continue\n    entry = dict(row)\n    for field in [\"required_identifiers\", \"search_terms\", \"repositories\", \"evidence\", \"uncertainties\", \"intake_rules\"]:\n        value = entry.get(field)\n        if isinstance(value, str) and value.strip():\n            entry[field] = json.loads(value)\n    catalog.append(entry)\n\ncatalog.sort(key=lambda entry: entry[\"feature_key\"])\n\nreturn [{\"json\": {\n    \"tool_call_budget\": TOOL_CALL_BUDGET,\n    \"existing_catalog\": catalog,\n    \"existing_feature_keys\": [entry[\"feature_key\"] for entry in catalog],\n    \"repository\": REPOSITORY,\n    \"repository_kind\": REPOSITORIES[REPOSITORY][\"kind\"],\n    \"project_id\": REPOSITORIES[REPOSITORY][\"project_id\"],\n    \"source_ref\": REPOSITORIES[REPOSITORY][\"ref\"]\n}}]\n"
       },
       "id": "ea26392c-5187-4ba2-a005-cc201c89a194",
       "name": "Prepare Catalog Scope",
@@ -886,10 +886,10 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "103eeedd-90a5-4943-ba7f-0a4e8b89bbb7",
+  "versionId": "2edfcd0f-3e50-49d9-8a4c-996ab8a749dd",
   "activeVersionId": null,
-  "versionCounter": 296,
-  "triggerCount": 0,
+  "versionCounter": 300,
+  "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
   "versionMetadata": {
