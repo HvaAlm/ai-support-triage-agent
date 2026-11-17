@@ -1941,7 +1941,7 @@
     },
     {
       "parameters": {
-        "jsCode": "function formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    `تعداد گزارش‌ها: ${row.case_count || 1}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\n// Runs after support confirmed the report with the ✅ button.\nconst ctx = $('Confirm Case').first().json;\nconst output = ctx.output;\nconst issue = output.issue;\nif (!issue || !issue.issue_key) return [];  // not linked to an issue\n\nconst refs = $('Load Tech Messages').all().map(item => item.json).filter(ref => ref.message_id);\nconst recipients = $input.all().map(item => item.json).filter(r => r.chat_id);\nconst stored = $('Load Issue Row').all().map(item => item.json).find(r => r.issue_key === issue.issue_key) || {};\nconst triage = output.triage || {};\nconst row = {\n  issue_key: issue.issue_key,\n  title: stored.title || issue.title || '',\n  team: stored.team || triage.team,\n  priority: stored.priority || triage.priority,\n  feature_name: stored.feature_name || output.case.feature_name,\n  modules: stored.modules || '',\n  case_count: Number(stored.case_count) || Number(issue.count) || 1,\n  investigation: stored.investigation || '',\n};\nconst photos = output.photo_description || '';\nconst base = { case_id: ctx.case_id, issue_key: row.issue_key };\nconst plans = [];\n\n// Every post of this issue shows the latest confirmed report and count.\nconst edited = new Date().toLocaleString('fa-IR', {\n  timeZone: 'Asia/Tehran', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',\n});\nfor (const ref of refs) {\n  plans.push({ json: { ...base, action: 'edit', chat_id: String(ref.chat_id), message_id: ref.message_id, kind: ref.kind,\n    text: formatIssueMessage({ kind: ref.kind, row, c: output.case, triage, photos, edited }) } });\n}\n\nconst targets = recipients.filter(r => r.team === 'all' || r.team === row.team);\nconst send = (r, kind) => ({ json: { ...base, action: 'send', kind,\n  chat_id: String(r.chat_id),\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id),\n  text: formatIssueMessage({ kind, row, c: output.case, triage, photos }) } });\n\n// Post the issue where it has no message yet (first report, or an earlier post failed).\nconst posted = new Set(refs.map(ref => String(ref.chat_id)));\nfor (const r of targets) if (!posted.has(String(r.chat_id))) plans.push(send(r, 'new'));\n\n// A newly confirmed repeat that reaches a milestone gets a new message so the group is notified.\nconst milestone = ctx.first_submission && !issue.is_new && [3, 5, 10, 20].includes(row.case_count);\nif (milestone) for (const r of targets.filter(t => posted.has(String(t.chat_id)))) plans.push(send(r, `repeat:${row.case_count}`));\nreturn plans;\n"
+        "jsCode": "function investigationLines(raw) {\n  let inv = raw;\n  if (typeof inv === 'string') { try { inv = JSON.parse(inv); } catch (e) { inv = null; } }\n  if (!inv || !inv.likely_cause) return [];\n  const level = inv.confidence >= 0.7 ? 'بالا' : inv.confidence >= 0.4 ? 'متوسط' : 'پایین';\n  return [\n    '\\u0000',\n    `🔍 بررسی کد (حدس، نیاز به تأیید — اطمینان ${level}):`,\n    `علت احتمالی: ${inv.likely_cause}`,\n    ...(inv.suspects || []).slice(0, 3).map(s => `• ${s.repository}: ${s.path}${s.symbol ? ` (${s.symbol})` : ''} — ${s.why || ''}`),\n    inv.suggested_fix && `پیشنهاد رفع: ${inv.suggested_fix}`,\n  ];\n}\nfunction formatIssueMessage({ kind, row, c, triage, photos, edited, incomplete }) {\n  const TEAM = { backend: 'بک‌اند', frontend: 'فرانت‌اند', devops: 'دواپس' };\n  const PRIORITY = { critical: '🔴 بحرانی', high: '🟠 بالا', medium: '🟡 متوسط', low: '🟢 پایین' };\n  const BREAK = '\\u0000';\n  const list = value => (Array.isArray(value) ? value.filter(Boolean).join('، ') : value || '');\n  const ids = (c.collected_identifiers || []).map(i => `${i.name}: ${i.value}`).join('، ');\n  const team = TEAM[row.team] || row.team || 'نامشخص';\n  const repeats = String(kind || '').startsWith('repeat:') ? kind.split(':')[1] : row.case_count;\n  const lines = [\n    kind === 'new' ? `🆕 مشکل جدید برای تیم ${team}` : `🔁 این مشکل به ${repeats} گزارش رسید (تیم ${team})`,\n    `«${row.title}»`,\n    `کد: ${row.issue_key} | اولویت: ${PRIORITY[row.priority] || row.priority || '-'}`,\n    `قابلیت: ${row.feature_name || '-'} | بخش کد: ${row.modules || '-'}`,\n    `تعداد گزارش‌ها: ${row.case_count || 1}`,\n    BREAK,\n    c.description && `شرح: ${c.description}`,\n    c.actual_behavior && `اتفاق فعلی: ${c.actual_behavior}`,\n    c.expected_behavior && `انتظار: ${c.expected_behavior}`,\n    list(c.error_messages) && `خطا: ${list(c.error_messages)}`,\n    list(c.steps_to_reproduce) && `مراحل: ${list(c.steps_to_reproduce)}`,\n    c.affected_user_id && `مشتری: ${c.affected_user_id}`,\n    ids && `شناسه‌ها: ${ids}`,\n    c.occurred_at && `زمان: ${c.occurred_at}`,\n    c.environment && `محیط: ${c.environment}`,\n    photos && `تصویر: ${photos}`,\n    triage?.team_reason && `دلیل انتخاب تیم: ${triage.team_reason}`,\n    ...investigationLines(row.investigation),\n    (edited || incomplete) && BREAK,\n    incomplete && '⏳ پشتیبانی در حال تکمیل اطلاعات این گزارش است.',\n    edited && `✏️ به‌روزرسانی شد: ${edited}`,\n  ].filter(Boolean).map(line => (line === BREAK ? '' : line));\n  return lines.join('\\n').slice(0, 4000);\n}\n\n// Runs after support confirmed the report with the ✅ button.\nconst ctx = $('Confirm Case').first().json;\nconst output = ctx.output;\nconst issue = output.issue;\nif (!issue || !issue.issue_key) return [];  // not linked to an issue\n\nconst refs = $('Load Tech Messages').all().map(item => item.json).filter(ref => ref.message_id);\nconst recipients = $input.all().map(item => item.json).filter(r => r.chat_id);\nconst stored = $('Load Issue Row').all().map(item => item.json).find(r => r.issue_key === issue.issue_key) || {};\nconst triage = output.triage || {};\nconst row = {\n  issue_key: issue.issue_key,\n  title: stored.title || issue.title || '',\n  team: stored.team || triage.team,\n  priority: stored.priority || triage.priority,\n  feature_name: stored.feature_name || output.case.feature_name,\n  modules: stored.modules || '',\n  case_count: Number(stored.case_count) || Number(issue.count) || 1,\n  investigation: stored.investigation || '',\n};\nconst photos = output.photo_description || '';\nconst base = { case_id: ctx.case_id, issue_key: row.issue_key };\nconst plans = [];\n\n// Every post of this issue shows the latest confirmed report and count.\nconst edited = new Date().toLocaleString('fa-IR', {\n  timeZone: 'Asia/Tehran', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',\n});\nfor (const ref of refs) {\n  plans.push({ json: { ...base, action: 'edit', chat_id: String(ref.chat_id), message_id: ref.message_id, kind: ref.kind,\n    text: formatIssueMessage({ kind: ref.kind, row, c: output.case, triage, photos, edited }) } });\n}\n\nconst targets = recipients.filter(r => r.team === 'all' || r.team === row.team);\nconst send = (r, kind) => ({ json: { ...base, action: 'send', kind,\n  chat_id: String(r.chat_id),\n  // General (topic 1) must be sent without a topic id; other topics are passed through.\n  thread_id: ['', '1'].includes(String(r.thread_id || '')) ? '' : String(r.thread_id),\n  text: formatIssueMessage({ kind, row, c: output.case, triage, photos }) } });\n\n// Post the issue where it has no message yet (first report, or an earlier post failed).\nconst posted = new Set(refs.map(ref => String(ref.chat_id)));\nfor (const r of targets) if (!posted.has(String(r.chat_id))) plans.push(send(r, 'new'));\n\n// A newly confirmed repeat that reaches a milestone gets a new message so the group is notified.\nconst milestone = ctx.first_submission && !issue.is_new && [3, 5, 10, 20].includes(row.case_count);\nif (milestone) for (const r of targets.filter(t => posted.has(String(t.chat_id)))) plans.push(send(r, `repeat:${row.case_count}`));\nreturn plans;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2556,6 +2556,75 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3d96142b-8157-4375-b3c4-34040cc2d92e",
+              "leftValue": "={{ $('Confirm Case').first().json.first_submission && Boolean($('Confirm Case').first().json.output.issue?.is_new) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1100,
+        -900
+      ],
+      "id": "ea017dd2-b15b-4d92-bd72-6b3001004391",
+      "name": "Needs Investigation?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Confirm Case').first().json;\nreturn [{ json: { case_id: ctx.case_id, issue_key: ctx.output.issue.issue_key, output: ctx.output } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        -1000
+      ],
+      "id": "18e971da-4a6a-497b-9b49-7aa52da1fdb0",
+      "name": "Investigation Input"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "triageInvestigate",
+          "mode": "list",
+          "cachedResultName": "Datami — Issue Investigation"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1320,
+        -900
+      ],
+      "id": "c78d0d24-f773-48be-99d2-b26ab1c68886",
+      "name": "Start Investigation"
     },
     {
       "id": "5f57245b-8cc4-41c3-b417-32ae7d9b4001",
@@ -3435,6 +3504,11 @@
             "node": "Load Tech Messages",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Needs Investigation?",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -3534,6 +3608,29 @@
         ]
       ]
     },
+    "Needs Investigation?": {
+      "main": [
+        [
+          {
+            "node": "Investigation Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Investigation Input": {
+      "main": [
+        [
+          {
+            "node": "Start Investigation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Manual Plot Test": {
       "main": [
         [
@@ -3567,9 +3664,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "4b7dd24d-12ad-47d4-92e0-12a32f71966e",
+  "versionId": "778598c6-ead8-4a8c-9f1e-b74843c4869a",
   "activeVersionId": null,
-  "versionCounter": 293,
+  "versionCounter": 294,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
