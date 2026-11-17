@@ -450,7 +450,7 @@
           "conditions": [
             {
               "id": "e484fde6-c6d5-4726-9c59-5f1cef5b7acf",
-              "leftValue": "={{ ['/new', '/start'].includes((($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0]) }}",
+              "leftValue": "={{ [\"/new\", \"/start\"].includes((t => ({\"📝 گزارش جدید\": \"/new\", \"✅ تمام شد\": \"/done\", \"📊 آمار\": \"/report\", \"❓ راهنما\": \"/help\"})[t] || t.split(/[\\s@]/)[0])(String(($json.message || $json.edited_message).text || '').trim())) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -536,10 +536,44 @@
     {
       "parameters": {
         "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
-        "text": "باشه، گزارش قبلی بسته شد. مشکل جدید رو برام توضیح بدید.",
+        "text": "باشه، گزارش قبلی بسته شد. مشکل جدید رو برام توضیح بدید؛ هر وقت تموم شد «✅ تمام شد» رو بزنید. راهنما: «❓ راهنما»",
         "additionalFields": {
           "appendAttribution": false,
-          "parse_mode": "HTML"
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ ($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).message_id }}"
+        },
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📝 گزارش جدید"
+                  },
+                  {
+                    "text": "✅ تمام شد"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📊 آمار"
+                  },
+                  {
+                    "text": "❓ راهنما"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "replyKeyboardOptions": {
+          "resize_keyboard": true,
+          "selective": true
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -698,7 +732,7 @@
           "conditions": [
             {
               "id": "3f1910f8-7e73-4770-8c4b-421c4202c726",
-              "leftValue": "={{ (($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0] === '/done' }}",
+              "leftValue": "={{ [\"/done\"].includes((t => ({\"📝 گزارش جدید\": \"/new\", \"✅ تمام شد\": \"/done\", \"📊 آمار\": \"/report\", \"❓ راهنما\": \"/help\"})[t] || t.split(/[\\s@]/)[0])(String(($json.message || $json.edited_message).text || '').trim())) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -1577,7 +1611,7 @@
           "conditions": [
             {
               "id": "eb7d0eab-d064-4412-970b-d2b87090053a",
-              "leftValue": "={{ (($json.message || $json.edited_message).text || '').trim().split(/[\\s@]/)[0] === '/report' }}",
+              "leftValue": "={{ [\"/report\"].includes((t => ({\"📝 گزارش جدید\": \"/new\", \"✅ تمام شد\": \"/done\", \"📊 آمار\": \"/report\", \"❓ راهنما\": \"/help\"})[t] || t.split(/[\\s@]/)[0])(String(($json.message || $json.edited_message).text || '').trim())) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -2627,6 +2661,99 @@
       "name": "Start Investigation"
     },
     {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4a1f26c5-9f3d-4324-a888-a2b08b8c30db",
+              "leftValue": "={{ [\"/help\"].includes((t => ({\"📝 گزارش جدید\": \"/new\", \"✅ تمام شد\": \"/done\", \"📊 آمار\": \"/report\", \"❓ راهنما\": \"/help\"})[t] || t.split(/[\\s@]/)[0])(String(($json.message || $json.edited_message).text || '').trim())) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -520,
+        560
+      ],
+      "id": "5cd98c04-bcff-4539-b1d3-f2bdbf44f423",
+      "name": "Is Help Command?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ String(($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).chat.id) }}",
+        "text": "راهنمای ربات پشتیبانی دیتامی 👋\n• مشکل رو با یک یا چند پیام و عکس توضیح بدید. چند ثانیه بعد از آخرین پیام، یا با «✅ تمام شد»، بررسیش می‌کنم و اگه چیزی کم باشه می‌پرسم.\n• وقتی گزارش کامل شد، خلاصه‌اش رو می‌فرستم. اگه درست بود «✅ ارسال برای تیم فنی» رو بزنید؛ تا تأیید نکنید چیزی برای تیم فنی نمی‌ره.\n• برای اصلاح گزارشی که قبلاً فرستادید، روی یکی از پیام‌هاش ریپلای کنید یا پیام رو ویرایش کنید.\n• «📝 گزارش جدید» گزارش فعلی رو می‌بنده و یکی تازه شروع می‌کنه.\n• «📊 آمار» خلاصه مشکلات ثبت‌شده رو نشون می‌ده.\n• در گروه: روی پیام موردنظر ریپلای کنید و ‎@ai_support_triage_bot رو تگ کنید.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "reply_to_message_id": "={{ ($('Telegram Trigger').first().json.message || $('Telegram Trigger').first().json.edited_message).message_id }}"
+        },
+        "replyMarkup": "replyKeyboard",
+        "replyKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📝 گزارش جدید"
+                  },
+                  {
+                    "text": "✅ تمام شد"
+                  }
+                ]
+              }
+            },
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "📊 آمار"
+                  },
+                  {
+                    "text": "❓ راهنما"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "replyKeyboardOptions": {
+          "resize_keyboard": true,
+          "selective": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -280,
+        700
+      ],
+      "id": "ceb61537-2e4c-4ccf-b7ef-36db2ae082f9",
+      "name": "Send Help",
+      "webhookId": "b62c9a7a-f5d7-4854-9b67-79ad906c99b6",
+      "credentials": {
+        "telegramApi": {
+          "id": "bQcIL3ySFgpKZa9v",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
       "id": "5f57245b-8cc4-41c3-b417-32ae7d9b4001",
       "name": "Manual Plot Test",
       "type": "n8n-nodes-base.manualTrigger",
@@ -3253,7 +3380,7 @@
         ],
         [
           {
-            "node": "Is Done Command?",
+            "node": "Is Help Command?",
             "type": "main",
             "index": 0
           }
@@ -3631,6 +3758,24 @@
         ]
       ]
     },
+    "Is Help Command?": {
+      "main": [
+        [
+          {
+            "node": "Send Help",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Done Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Manual Plot Test": {
       "main": [
         [
@@ -3664,9 +3809,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "778598c6-ead8-4a8c-9f1e-b74843c4869a",
+  "versionId": "8f682d0f-e090-47ac-a1a0-2cd255f6cf02",
   "activeVersionId": null,
-  "versionCounter": 294,
+  "versionCounter": 295,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
