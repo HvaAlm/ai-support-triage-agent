@@ -74,7 +74,8 @@
         -32
       ],
       "id": "6f1ca8bd-e3f1-40cc-b904-4555d2eee06b",
-      "name": "Build Feature Catalog"
+      "name": "Build Feature Catalog",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -103,7 +104,8 @@
         -32
       ],
       "id": "12b313dc-ffc2-4175-babc-d0e89403799f",
-      "name": "Get Feature Catalog"
+      "name": "Get Feature Catalog",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -118,7 +120,8 @@
       ],
       "id": "7cdfe967-3fba-40c5-891f-c51c89ee4ef0",
       "name": "Prepare Intake Input",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -198,7 +201,8 @@
         -32
       ],
       "id": "6ad42d33-c6ad-4245-abc0-1ab8d32dd90f",
-      "name": "Edit Fields"
+      "name": "Edit Fields",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -3809,9 +3813,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "8de86e72-50da-4284-87bf-337abf33906a",
+  "versionId": "697b3039-14d5-4478-986d-1837f1fe253e",
   "activeVersionId": null,
-  "versionCounter": 296,
+  "versionCounter": 297,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],

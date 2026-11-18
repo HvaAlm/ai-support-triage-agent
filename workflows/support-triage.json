@@ -4,7 +4,7 @@
   "id": "SWWlrw3ihBa33qg9",
   "name": "Datami — Support Intake & Triage",
   "description": null,
-  "active": true,
+  "active": false,
   "isArchived": false,
   "nodes": [
     {
@@ -99,7 +99,8 @@
         -32
       ],
       "id": "6f1ca8bd-e3f1-40cc-b904-4555d2eee06b",
-      "name": "Build Feature Catalog"
+      "name": "Build Feature Catalog",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -128,7 +129,8 @@
         -32
       ],
       "id": "12b313dc-ffc2-4175-babc-d0e89403799f",
-      "name": "Get Feature Catalog"
+      "name": "Get Feature Catalog",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -143,7 +145,8 @@
       ],
       "id": "7cdfe967-3fba-40c5-891f-c51c89ee4ef0",
       "name": "Prepare Intake Input",
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -223,7 +226,8 @@
         -32
       ],
       "id": "6ad42d33-c6ad-4245-abc0-1ab8d32dd90f",
-      "name": "Edit Fields"
+      "name": "Edit Fields",
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -3874,9 +3878,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "31c88964-3fd6-48e3-a18a-87a966660379",
-  "activeVersionId": "31c88964-3fd6-48e3-a18a-87a966660379",
-  "versionCounter": 297,
+  "versionId": "8c62120a-b6ea-4485-9585-3837a2ef8832",
+  "activeVersionId": null,
+  "versionCounter": 298,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
