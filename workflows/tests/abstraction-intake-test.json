@@ -2603,7 +2603,7 @@
           "conditions": [
             {
               "id": "3d96142b-8157-4375-b3c4-34040cc2d92e",
-              "leftValue": "={{ $('Confirm Case').first().json.first_submission && Boolean($('Confirm Case').first().json.output.issue?.is_new) }}",
+              "leftValue": "={{ $('Confirm Case').first().json.first_submission && !($('Load Issue Row').all().map(i => i.json).find(r => r.issue_key === $('Confirm Case').first().json.output.issue?.issue_key)?.investigation) }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -3809,9 +3809,9 @@
   },
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "81bc397d-1d66-419d-9d23-ab38db1957ab",
+  "versionId": "5e6fc7ea-4092-47f3-8bdf-583e1cca4bcd",
   "activeVersionId": null,
-  "versionCounter": 295,
+  "versionCounter": 296,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
