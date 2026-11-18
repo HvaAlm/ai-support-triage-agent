@@ -52,12 +52,16 @@ services:
       N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
       N8N_RUNNERS_AUTH_TOKEN: ${N8N_RUNNERS_AUTH_TOKEN:?Set N8N_RUNNERS_AUTH_TOKEN in .env}
 
+      # GitLab workflows build URLs from $env.GITLAB_BASE_URL.
+      GITLAB_BASE_URL: ${GITLAB_BASE_URL:?Set GITLAB_BASE_URL in .env}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+
+    # Private DNS entries (extra_hosts) go in docker-compose.override.yaml, which is not committed.
     volumes:
       - n8n_data:/home/node/.n8n
 
     extra_hosts:
       - "host.docker.internal:host-gateway"
-      - "gateway.example.com:10.0.0.1"
 
 
   task-runners:

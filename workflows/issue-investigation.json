@@ -118,7 +118,7 @@
     {
       "parameters": {
         "toolDescription": "List files and folders of a Datami repository. repository: backend or frontend. Use path=\"\" for the root. If 100 entries come back, request the next page.",
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + ($fromAI('repository', 'backend or frontend', 'string', 'backend') === 'frontend' ? 2102 : 1399) + '/repository/tree' }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + ($fromAI('repository', 'backend or frontend', 'string', 'backend') === 'frontend' ? 2102 : 1399) + '/repository/tree' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "sendQuery": true,
@@ -161,14 +161,14 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },
     {
       "parameters": {
         "toolDescription": "Read one source file of a Datami repository. repository: backend or frontend. Use an exact path from list_repo_files. Never read secrets, .env files, keys or logs.",
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + ($fromAI('repository', 'backend or frontend', 'string', 'backend') === 'frontend' ? 2102 : 1399) + '/repository/files/' + encodeURIComponent($fromAI('file_path', 'Exact repository-relative file path.', 'string')) + '/raw' }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + ($fromAI('repository', 'backend or frontend', 'string', 'backend') === 'frontend' ? 2102 : 1399) + '/repository/files/' + encodeURIComponent($fromAI('file_path', 'Exact repository-relative file path.', 'string')) + '/raw' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "sendQuery": true,
@@ -199,7 +199,7 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },

@@ -13,3 +13,4 @@ data/
 
 # Private migration backups contain credentials and support data.
 migration-bundles/
+docker-compose.override.yaml

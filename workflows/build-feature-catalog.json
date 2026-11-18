@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/commits/' + encodeURIComponent($('Prepare Catalog Scope').first().json.source_ref) }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/commits/' + encodeURIComponent($('Prepare Catalog Scope').first().json.source_ref) }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "options": {}
@@ -37,13 +37,13 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },
     {
       "parameters": {
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/files/AGENTS.md/raw' }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/files/AGENTS.md/raw' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "sendQuery": true,
@@ -74,14 +74,14 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },
     {
       "parameters": {
         "toolDescription": "List files and directories in the repository being analysed.\nUse path=\"\" for the root directory.\nUse the returned paths to explore relevant directories.\nPagination starts at page 1. If 100 entries are returned, request the next page.",
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/tree' }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/tree' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "sendQuery": true,
@@ -128,14 +128,14 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },
     {
       "parameters": {
         "toolDescription": "Read a source file or project documentation.\nUse an exact file path returned by list_backend_files.\nDo not request secrets, .env files, private keys, credentials, or log files.",
-        "url": "={{ 'https://git.example.com/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/files/' + encodeURIComponent($fromAI('file_path', 'Exact repository-relative source file path to read.', 'string')) + '/raw' }}",
+        "url": "={{ $env.GITLAB_BASE_URL + '/api/v4/projects/' + $('Prepare Catalog Scope').first().json.project_id + '/repository/files/' + encodeURIComponent($fromAI('file_path', 'Exact repository-relative source file path to read.', 'string')) + '/raw' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "gitlabApi",
         "sendQuery": true,
@@ -166,7 +166,7 @@
       "credentials": {
         "gitlabApi": {
           "id": "iNrHvGZ8wqRGgSIk",
-          "name": "GitLab datami-backend"
+          "name": "GitLab"
         }
       }
     },

@@ -9,8 +9,8 @@ class Settings:
     database: Path = Path('data/cases.sqlite3')
     attachments: Path = Path('data/attachments')
     mode: str = 'mock'
-    gitlab_base_url: str = 'https://git.example.com'
-    gitlab_project_path: str = 'group/backend'
+    gitlab_base_url: str = ''
+    gitlab_project_path: str = ''
     backend_ref: str | None = None
     codex_binary: str = 'codex'
     investigation_timeout: int = 180
@@ -30,10 +30,12 @@ class Settings:
             raise ValueError('INVESTIGATION_TIMEOUT_SECONDS must be positive')
         if mode == 'mock' and os.getenv('TICKET_PUBLISHER', 'dry-run') != 'dry-run':
             raise ValueError('Offline mock mode requires TICKET_PUBLISHER=dry-run')
+        if mode == 'live' and not (os.getenv('GITLAB_BASE_URL') and os.getenv('GITLAB_PROJECT_PATH')):
+            raise ValueError('Live mode requires GITLAB_BASE_URL and GITLAB_PROJECT_PATH')
         return cls(database=Path(os.getenv('CASE_DATABASE', 'data/cases.sqlite3')),
                    attachments=Path(os.getenv('ATTACHMENT_DIR', 'data/attachments')),
-                   mode=mode, gitlab_base_url=os.getenv('GITLAB_BASE_URL', 'https://git.example.com'),
-                   gitlab_project_path=os.getenv('GITLAB_PROJECT_PATH', 'group/backend'),
+                   mode=mode, gitlab_base_url=os.getenv('GITLAB_BASE_URL', ''),
+                   gitlab_project_path=os.getenv('GITLAB_PROJECT_PATH', ''),
                    backend_ref=os.getenv('BACKEND_REF') or None,
                    codex_binary=os.getenv('CODEX_BINARY', 'codex'), investigation_timeout=timeout,
                    ticket_project=os.getenv('TICKET_PROJECT', ''),
